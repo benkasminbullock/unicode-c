@@ -43,22 +43,27 @@ int utf8_to_ucs2 (const unsigned char * input, const unsigned char ** end_ptr)
 
 /* BKB 2010-04-06 11:33:55 */
 /* Assumes that the buffer has at least four bytes. */
+/* Returns no. of bytes written or -1 if error. Adds a zero byte to
+   the end of the string. */
 
 int ucs2_to_utf8 (int ucs2, unsigned char * utf8)
 {
     if (ucs2 < 0x80) {
         utf8[0] = ucs2;
+        utf8[1] = '\0';
         return 1;
     }
     if (ucs2 >= 0x80  && ucs2 < 0x800) {
         utf8[0] = (ucs2 >> 6)   | 0xC0;
         utf8[1] = (ucs2 & 0x3F) | 0x80;
+        utf8[2] = '\0';
         return 2;
     }
     if (ucs2 >= 0x800 && ucs2 < 0xFFFF) {
         utf8[0] = ((ucs2 >> 12)       ) | 0xE0;
         utf8[1] = ((ucs2 >> 6 ) & 0x3F) | 0x80;
         utf8[2] = ((ucs2      ) & 0x3F) | 0x80;
+        utf8[3] = '\0';
         return 3;
     }
     return -1;
