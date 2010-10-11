@@ -69,6 +69,49 @@ int ucs2_to_utf8 (int ucs2, unsigned char * utf8)
     return -1;
 }
 
+/* Given a count of Unicode characters "n_chars", return the number of bytes. */
+
+int unicode_chars_to_bytes (const unsigned char * utf8, int n_chars)
+{
+    int i;
+    const unsigned char * p = utf8;
+    int len = strlen ((const char *) utf8);
+    if (len == 0 && n_chars != 0) {
+        fprintf (stderr, "Error: request for n_chars of empty string.\n");
+        exit (1);
+    }
+    for (i = 0; i < n_chars; i++) {
+        int ucs2 = utf8_to_ucs2 (p, & p);
+        if (ucs2 == -1) {
+            fprintf (stderr, "Error: not UTF-8.\n");
+            exit (1);
+        }
+    }
+    return p - utf8;
+}
+
+int unicode_count_chars (const unsigned char * utf8)
+{
+    int chars = 0;
+    const unsigned char * p = utf8;
+    int len = strlen ((const char *) utf8);
+    if (len == 0) {
+        return 0;
+    }
+    while (p - utf8 < len) {
+        int ucs2;
+        ucs2 = utf8_to_ucs2 (p, & p);
+        if (ucs2 == -1) {
+            return -1;
+        }
+        chars++;
+        if (*p == '\0') {
+            return chars;
+        }
+    }
+    return -1;
+}
+
 #ifdef TEST
 
 void print_bytes (const unsigned char * bytes)
@@ -133,6 +176,7 @@ int main ()
         start = end;
     }
     test_ucs2_to_utf8 (utf8);
+    printf ("%d = 7?\n", unicode_count_chars (utf8));
     return 0;
 }
 
