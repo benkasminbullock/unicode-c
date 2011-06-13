@@ -20,7 +20,7 @@ test:	unicode-test unicode-character-class-test
 	./unicode-test
 	./unicode-character-class-test
 
-unicode-test:	unicode.c
+unicode-test:	unicode.c unicode.h
 	cc -g -Wall -DTEST unicode.c -o unicode-test
 
 unicode-character-class-test:	unicode-character-class.c unicode.o

@@ -1,0 +1,15 @@
+# Makefile to copy stuff from the project library directory to
+# whereever these files are needed.
+
+unicode.c:      $(UNICODE_LIB_DIR)/unicode.c
+	$(COPY_READONLY) $(UNICODE_LIB_DIR)/unicode.c unicode.c
+
+unicode.h:	$(UNICODE_LIB_DIR)/unicode.h
+	$(COPY_READONLY) $(UNICODE_LIB_DIR)/unicode.h unicode.h
+
+$(UNICODE_LIB_DIR)/unicode.h:	$(UNICODE_LIB_DIR)/unicode.c
+	make -C $(UNICODE_LIB_DIR) unicode.h
+
+# Local Variables:
+# mode: makefile
+# End:

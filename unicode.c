@@ -3,11 +3,15 @@
 #include <string.h>
 #include "unicode.h"
 
+#ifdef HEADER
+#define UTF8_MAX_LENGTH 4
+#endif /* def HEADER */
+
 /* Convert a UTF-8 encoded character in "input" into a number. This
    function returns the unicode value of the UTF-8 character if
    successful, and -1 if not successful. "end_ptr" is set to the next
-   character after the read character on success. or the start of
-   input on failure. "end_ptr" may not be null. */
+   character after the read character on success. "end_ptr" is set to
+   the start of input on failure. "end_ptr" may not be null. */
 
 int utf8_to_ucs2 (const unsigned char * input, const unsigned char ** end_ptr)
 {
@@ -35,12 +39,12 @@ int utf8_to_ucs2 (const unsigned char * input, const unsigned char ** end_ptr)
             (input[0] & 0x1F)<<6  |
             (input[1] & 0x3F);
     }
-    /*
-    fprintf (stderr, "Badly-formed UTF-8 byte %X\n", input[0]);
-    */
     return -1;
 }
 
+    /*
+    fprintf (stderr, "Badly-formed UTF-8 byte %X\n", input[0]);
+    */
 /* BKB 2010-04-06 11:33:55 */
 /* Assumes that the buffer has at least four bytes. */
 /* Returns no. of bytes written or -1 if error. Adds a zero byte to
