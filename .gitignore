@@ -1,3 +1,4 @@
 unicode-test
 *.~*~
 unicode.h
+libunicode.a
