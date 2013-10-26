@@ -46,9 +46,16 @@ int utf8_to_ucs2 (const unsigned char * input, const unsigned char ** end_ptr)
     fprintf (stderr, "Badly-formed UTF-8 byte %X\n", input[0]);
     */
 /* BKB 2010-04-06 11:33:55 */
-/* Assumes that the buffer has at least four bytes. */
-/* Returns no. of bytes written or -1 if error. Adds a zero byte to
-   the end of the string. */
+
+/* Input: a Unicode code point, "ucs2". 
+
+   Output: UTF-8 characters in buffer "utf8". 
+
+   Return value: the number of bytes written into "utf8", or -1 if
+   there was an error.
+
+   This adds a zero byte to the end of the string. It assumes that the
+   buffer "utf8" has at least four bytes of space to write to. */
 
 int ucs2_to_utf8 (int ucs2, unsigned char * utf8)
 {
@@ -64,6 +71,10 @@ int ucs2_to_utf8 (int ucs2, unsigned char * utf8)
         return 2;
     }
     if (ucs2 >= 0x800 && ucs2 < 0xFFFF) {
+	if (ucs2 >= 0xD800 && ucs2 <= 0xDFFF) {
+	    /* Ill-formed. */
+	    return -1;
+	}
         utf8[0] = ((ucs2 >> 12)       ) | 0xE0;
         utf8[1] = ((ucs2 >> 6 ) & 0x3F) | 0x80;
         utf8[2] = ((ucs2      ) & 0x3F) | 0x80;
@@ -73,7 +84,8 @@ int ucs2_to_utf8 (int ucs2, unsigned char * utf8)
     return -1;
 }
 
-/* Given a count of Unicode characters "n_chars", return the number of bytes. */
+/* Given a count of Unicode characters "n_chars", return the number of
+   bytes. */
 
 int unicode_chars_to_bytes (const unsigned char * utf8, int n_chars)
 {
