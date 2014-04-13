@@ -5,6 +5,9 @@
 
 #ifdef HEADER
 #define UTF8_MAX_LENGTH 4
+#define UNICODE_BAD_INPUT -1
+#define UNICODE_SURROGATE_PAIR -2
+#define UNICODE_NOT_SURROGATE_PAIR -3
 #endif /* def HEADER */
 
 /* Convert a UTF-8 encoded character in "input" into a number. This
@@ -42,11 +45,6 @@ int utf8_to_ucs2 (const unsigned char * input, const unsigned char ** end_ptr)
     return -1;
 }
 
-    /*
-    fprintf (stderr, "Badly-formed UTF-8 byte %X\n", input[0]);
-    */
-/* BKB 2010-04-06 11:33:55 */
-
 /* Input: a Unicode code point, "ucs2". 
 
    Output: UTF-8 characters in buffer "utf8". 
@@ -73,7 +71,7 @@ int ucs2_to_utf8 (int ucs2, unsigned char * utf8)
     if (ucs2 >= 0x800 && ucs2 < 0xFFFF) {
 	if (ucs2 >= 0xD800 && ucs2 <= 0xDFFF) {
 	    /* Ill-formed. */
-	    return -1;
+	    return UNICODE_SURROGATE_PAIR;
 	}
         utf8[0] = ((ucs2 >> 12)       ) | 0xE0;
         utf8[1] = ((ucs2 >> 6 ) & 0x3F) | 0x80;
@@ -81,7 +79,38 @@ int ucs2_to_utf8 (int ucs2, unsigned char * utf8)
         utf8[3] = '\0';
         return 3;
     }
-    return -1;
+    if (ucs2 >= 0x10000 && ucs2 < 0x10FFFF) {
+	/* http://tidy.sourceforge.net/cgi-bin/lxr/source/src/utf8.c#L380 */
+	utf8[0] = 0xF0 | (ucs2 >> 18);
+	utf8[1] = 0x80 | ((ucs2 >> 12) & 0x3F);
+	utf8[2] = 0x80 | ((ucs2 >> 6) & 0x3F);
+	utf8[3] = 0x80 | ((ucs2 & 0x3F));
+        utf8[4] = '\0';
+        return 4;
+    }
+    return UNICODE_BAD_INPUT;
+}
+
+/* Convert surrogate pairs to UTF-8. */
+
+int surrogate_to_utf8 (int hi, int lo, unsigned char * utf8)
+{
+    int X, W, U, C;
+    if (hi < 0xD800 || hi > 0xDFFF) {
+	/* Not surrogate pair. */
+	return UNICODE_NOT_SURROGATE_PAIR;
+    }
+    if (lo < 0xD800 || lo > 0xDFFF) {
+	/* Not surrogate pair. */
+	return UNICODE_NOT_SURROGATE_PAIR;
+    }
+    /* http://www.unicode.org/faq/utf_bom.html#utf16-3 */
+    X = ((hi & ((1 << 6) -1)) << 10) | (lo & ((1 << 10) -1));
+    W = (hi >> 6) & ((1 << 5) - 1);
+    U = W + 1;
+    C = U << 16 | X;
+
+    return ucs2_to_utf8 (C, utf8);
 }
 
 /* Given a count of Unicode characters "n_chars", return the number of
