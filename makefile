@@ -17,7 +17,7 @@ unicode-character-class.o:	unicode-character-class.c unicode.h
 
 
 test:	unicode-test unicode-character-class-test
-	./unicode-test
+	prove ./unicode-test
 	./unicode-character-class-test
 
 unicode-test:	unicode.c unicode.h

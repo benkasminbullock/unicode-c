@@ -8,6 +8,7 @@
 #define UNICODE_BAD_INPUT -1
 #define UNICODE_SURROGATE_PAIR -2
 #define UNICODE_NOT_SURROGATE_PAIR -3
+#define UNICODE_BAD_UTF8 -4
 #endif /* def HEADER */
 
 /* Convert a UTF-8 encoded character in "input" into a number. This
@@ -22,12 +23,16 @@ int utf8_to_ucs2 (const unsigned char * input, const unsigned char ** end_ptr)
     if (input[0] == 0)
         return -1;
     if (input[0] < 0x80) {
+	/* One byte (ASCII) case. */
         * end_ptr = input + 1;
         return input[0];
     }
     if ((input[0] & 0xE0) == 0xE0) {
-        if (input[1] == 0 || input[2] == 0)
-            return -1;
+	/* Three byte case. */
+        if (input[1] < 0x80 || input[1] > 0xBF ||
+	    input[2] < 0x80 || input[2] > 0xBF) {
+            return UNICODE_BAD_UTF8;
+	}
         * end_ptr = input + 3;
         return
             (input[0] & 0x0F)<<12 |
@@ -35,8 +40,10 @@ int utf8_to_ucs2 (const unsigned char * input, const unsigned char ** end_ptr)
             (input[2] & 0x3F);
     }
     if ((input[0] & 0xC0) == 0xC0) {
-        if (input[1] == 0)
-            return -1;
+	/* Two byte case. */
+        if (input[1] < 0x80 || input[1] > 0xBF) {
+            return UNICODE_BAD_UTF8;
+	}
         * end_ptr = input + 2;
         return
             (input[0] & 0x1F)<<6  |
@@ -168,8 +175,20 @@ void print_bytes (const unsigned char * bytes)
     fprintf (stderr, "\n");
 }
 
+#define OK(test, message, ...) {		\
+	(*count)++;				\
+	if (test) {				\
+	    printf ("ok %d - ", (*count));	\
+	}					\
+	else {					\
+	    printf ("not ok %d - ", (*count));	\
+	}					\
+	printf (message, ## __VA_ARGS__);	\
+	printf (".\n");				\
+    }
 
-void test_ucs2_to_utf8 (const unsigned char * input)
+
+void test_ucs2_to_utf8 (const unsigned char * input, int * count)
 {
     /* Buffer to print utf8 out into. */
     unsigned char buffer[0x100];
@@ -183,46 +202,57 @@ void test_ucs2_to_utf8 (const unsigned char * input)
         int bytes;
         const unsigned char * end;
         unicode = utf8_to_ucs2 (start, & end);
-        if (unicode == -1)
+        if (unicode == -1) {
             break;
+	}
         start = end;
         bytes = ucs2_to_utf8 (unicode, offset);
-        if (bytes == -1) {
-            fprintf (stderr, "Failure\n");
-            break;
-        }
+	OK (bytes != -1, "no bad conversion");
         offset += bytes;
 #if 0
         printf ("%X %d\n", unicode, bytes);
 #endif
     }
     * offset = '\0';
-    if (strcmp ((const char *) buffer, (const char *) input) != 0) {
-        fprintf (stderr, "Failure: input %s resulted in output %s\n",
-                 input, buffer);
-        print_bytes (input);
-        print_bytes (buffer);
-    } else {
-        printf ("OK\n");
-    }
+    OK (strcmp ((const char *) buffer, (const char *) input) == 0,
+	"input %s resulted in identical output %s\n",
+	input, buffer);
+}
+
+static void
+test_invalid_utf8 (int * count)
+{
+    unsigned char invalid_utf8[8];
+    int unicode;
+    const unsigned char * end;
+    snprintf ((char *) invalid_utf8, 7, "%c%c%c", 0xe8, 0xe4, 0xe5);
+    unicode = utf8_to_ucs2 (invalid_utf8, & end);
+    OK (unicode == UNICODE_BAD_UTF8, "invalid UTF-8 gives incorrect result");
 }
 
 int main ()
 {
+    int iscount;
+    int * count;
+    count = & iscount;
+    iscount = 0;
     const unsigned char * utf8 = (unsigned char *) "漢数字ÔÕÖＸ";
     const unsigned char * start = utf8;
     while (*start) {
         int unicode;
         const unsigned char * end;
         unicode = utf8_to_ucs2 (start, & end);
-        if (unicode == -1 || unicode == 0)
+        if (unicode == -1 || unicode == 0) {
             break;
-        printf ("%s is %04X, length is %d\n", start, unicode, end - start);
+	}
+        printf ("# %s is %04X, length is %d\n", start, unicode, end - start);
         start = end;
     }
-    test_ucs2_to_utf8 (utf8);
-    printf ("%d = 7?\n", unicode_count_chars (utf8));
-    return 0;
+    test_ucs2_to_utf8 (utf8, count);
+    int cc = unicode_count_chars (utf8);
+    OK (cc == 7, "get seven characters for utf8");
+    test_invalid_utf8 (count);
+    printf ("1..%d\n", iscount);
 }
 
 #endif /* def TEST */
