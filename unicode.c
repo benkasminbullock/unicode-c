@@ -9,6 +9,7 @@
 #define UNICODE_SURROGATE_PAIR -2
 #define UNICODE_NOT_SURROGATE_PAIR -3
 #define UNICODE_BAD_UTF8 -4
+#define UNICODE_EMPTY_INPUT -5
 #endif /* def HEADER */
 
 /* Convert a UTF-8 encoded character in "input" into a number. This
@@ -121,7 +122,7 @@ int surrogate_to_utf8 (int hi, int lo, unsigned char * utf8)
 }
 
 /* Given a count of Unicode characters "n_chars", return the number of
-   bytes. */
+   bytes. A negative value indicates some kind of error. */
 
 int unicode_chars_to_bytes (const unsigned char * utf8, int n_chars)
 {
@@ -129,14 +130,12 @@ int unicode_chars_to_bytes (const unsigned char * utf8, int n_chars)
     const unsigned char * p = utf8;
     int len = strlen ((const char *) utf8);
     if (len == 0 && n_chars != 0) {
-        fprintf (stderr, "Error: request for n_chars of empty string.\n");
-        exit (1);
+	return UNICODE_EMPTY_INPUT;
     }
     for (i = 0; i < n_chars; i++) {
         int ucs2 = utf8_to_ucs2 (p, & p);
-        if (ucs2 == -1) {
-            fprintf (stderr, "Error: not UTF-8.\n");
-            exit (1);
+        if (ucs2 < 0) {
+	    return ucs2;
         }
     }
     return p - utf8;
@@ -175,13 +174,13 @@ void print_bytes (const unsigned char * bytes)
     fprintf (stderr, "\n");
 }
 
-#define OK(test, message, ...) {		\
-	(*count)++;				\
+#define OK(test, counter, message, ...) {	\
+	counter++;				\
 	if (test) {				\
-	    printf ("ok %d - ", (*count));	\
+	    printf ("ok %d - ", counter);	\
 	}					\
 	else {					\
-	    printf ("not ok %d - ", (*count));	\
+	    printf ("not ok %d - ", counter);	\
 	}					\
 	printf (message, ## __VA_ARGS__);	\
 	printf (".\n");				\
@@ -207,7 +206,7 @@ void test_ucs2_to_utf8 (const unsigned char * input, int * count)
 	}
         start = end;
         bytes = ucs2_to_utf8 (unicode, offset);
-	OK (bytes != -1, "no bad conversion");
+	OK (bytes != -1, (*count), "no bad conversion");
         offset += bytes;
 #if 0
         printf ("%X %d\n", unicode, bytes);
@@ -215,6 +214,7 @@ void test_ucs2_to_utf8 (const unsigned char * input, int * count)
     }
     * offset = '\0';
     OK (strcmp ((const char *) buffer, (const char *) input) == 0,
+	(*count),
 	"input %s resulted in identical output %s\n",
 	input, buffer);
 }
@@ -227,15 +227,15 @@ test_invalid_utf8 (int * count)
     const unsigned char * end;
     snprintf ((char *) invalid_utf8, 7, "%c%c%c", 0xe8, 0xe4, 0xe5);
     unicode = utf8_to_ucs2 (invalid_utf8, & end);
-    OK (unicode == UNICODE_BAD_UTF8, "invalid UTF-8 gives incorrect result");
+    OK (unicode == UNICODE_BAD_UTF8, (*count),
+	"invalid UTF-8 gives incorrect result");
 }
 
 int main ()
 {
-    int iscount;
-    int * count;
-    count = & iscount;
-    iscount = 0;
+    /* Test counter for TAP. */
+    int count;
+    count = 0;
     const unsigned char * utf8 = (unsigned char *) "漢数字ÔÕÖＸ";
     const unsigned char * start = utf8;
     while (*start) {
@@ -248,11 +248,11 @@ int main ()
         printf ("# %s is %04X, length is %d\n", start, unicode, end - start);
         start = end;
     }
-    test_ucs2_to_utf8 (utf8, count);
+    test_ucs2_to_utf8 (utf8, & count);
     int cc = unicode_count_chars (utf8);
-    OK (cc == 7, "get seven characters for utf8");
-    test_invalid_utf8 (count);
-    printf ("1..%d\n", iscount);
+    OK (cc == 7, count, "get seven characters for utf8");
+    test_invalid_utf8 (& count);
+    printf ("1..%d\n", count);
 }
 
 #endif /* def TEST */

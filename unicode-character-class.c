@@ -40,15 +40,31 @@ int utf8_is_kana_chars (const unsigned char * utf8, int len)
 
 #ifdef TEST
 
+#define OK(test, counter, message, ...) {	\
+	counter++;				\
+	if (test) {				\
+	    printf ("ok %d - ", counter);	\
+	}					\
+	else {					\
+	    printf ("not ok %d - ", counter);	\
+	}					\
+	printf (message, ## __VA_ARGS__);	\
+	printf (".\n");				\
+    }
+
 int main ()
 {
+    int counter = 0;
     int i;
+    int expect[] = {1, 0, 0};
     char * test[] = {"ひらがなカタカナスゲー",
-                     "かな This is not all kana ",
-                     "漢字"};
-    for (i = 0; i < sizeof (test) / sizeof (char *); i++) {
-        printf ("%s: %d\n", test[i], utf8_is_kana_chars ((unsigned char *) test[i], 0));
+		     "かな This is not all kana ",
+		     "漢字"};
+    for (i = 0; i < sizeof (test) / sizeof (unsigned char *); i++) {
+	OK (utf8_is_kana_chars ((unsigned char *) test[i], 0) == expect[i],
+	    counter, "%s %d", test[i], expect[i]);
     }
+    printf ("1..%d\n", counter);
     return 0;
 }
 
