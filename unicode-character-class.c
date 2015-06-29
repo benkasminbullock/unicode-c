@@ -26,10 +26,9 @@ int utf8_is_kana_chars (const unsigned char * utf8, int len)
         int ucs2;
         
         ucs2 = utf8_to_ucs2 (p, & p);
-        if (ucs2 == -1) {
-            fprintf (stderr, "Byte %d of %s is not UTF-8\n", p - utf8,
-                     utf8);
-            exit (1);
+        if (ucs2 < 0) {
+	    /* The input is incorrectly formatted in some way. */
+	    return 0;
         }
         if (! ucs2_is_kana (ucs2)) {
             return 0;
