@@ -17,8 +17,7 @@ unicode-character-class.o:	unicode-character-class.c unicode.h
 
 
 test:	unicode-test unicode-character-class-test
-	prove ./unicode-test
-	prove ./unicode-character-class-test
+	prove --nocolor ./unicode-test ./unicode-character-class-test
 
 unicode-test:	unicode.c unicode.h
 	cc -g -Wall -DTEST unicode.c -o unicode-test

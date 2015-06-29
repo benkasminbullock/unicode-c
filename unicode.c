@@ -204,9 +204,12 @@ void test_ucs2_to_utf8 (const unsigned char * input, int * count)
         if (unicode == -1) {
             break;
 	}
-        start = end;
         bytes = ucs2_to_utf8 (unicode, offset);
-	OK (bytes != -1, (*count), "no bad conversion");
+	OK (bytes > 0, (*count), "no bad conversion");
+	OK (strncmp ((const char *) offset,
+		     (const char *) start, bytes) == 0, (*count),
+	    "round trip OK for %X (%d bytes)", unicode, bytes);
+        start = end;
         offset += bytes;
 #if 0
         printf ("%X %d\n", unicode, bytes);
@@ -215,7 +218,7 @@ void test_ucs2_to_utf8 (const unsigned char * input, int * count)
     * offset = '\0';
     OK (strcmp ((const char *) buffer, (const char *) input) == 0,
 	(*count),
-	"input %s resulted in identical output %s\n",
+	"input %s resulted in identical output %s",
 	input, buffer);
 }
 
@@ -242,9 +245,7 @@ int main ()
         int unicode;
         const unsigned char * end;
         unicode = utf8_to_ucs2 (start, & end);
-        if (unicode == -1 || unicode == 0) {
-            break;
-	}
+	OK (unicode > 0, count, "no bad value at %s", start);
         printf ("# %s is %04X, length is %d\n", start, unicode, end - start);
         start = end;
     }
