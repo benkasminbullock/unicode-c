@@ -10,6 +10,8 @@
 #define UNICODE_NOT_SURROGATE_PAIR -3
 #define UNICODE_BAD_UTF8 -4
 #define UNICODE_EMPTY_INPUT -5
+/* For routines which don't need a return value. */
+#define UNICODE_OK 0
 #endif /* def HEADER */
 
 /* Convert a UTF-8 encoded character in "input" into a number. This
@@ -21,8 +23,9 @@
 int utf8_to_ucs2 (const unsigned char * input, const unsigned char ** end_ptr)
 {
     *end_ptr = input;
-    if (input[0] == 0)
+    if (input[0] == 0) {
         return -1;
+    }
     if (input[0] < 0x80) {
 	/* One byte (ASCII) case. */
         * end_ptr = input + 1;
@@ -50,15 +53,15 @@ int utf8_to_ucs2 (const unsigned char * input, const unsigned char ** end_ptr)
             (input[0] & 0x1F)<<6  |
             (input[1] & 0x3F);
     }
-    return -1;
+    return UNICODE_BAD_INPUT;
 }
 
 /* Input: a Unicode code point, "ucs2". 
 
    Output: UTF-8 characters in buffer "utf8". 
 
-   Return value: the number of bytes written into "utf8", or -1 if
-   there was an error.
+   Return value: the number of bytes written into "utf8", or a
+   negative number if there was an error.
 
    This adds a zero byte to the end of the string. It assumes that the
    buffer "utf8" has at least four bytes of space to write to. */
@@ -121,6 +124,24 @@ int surrogate_to_utf8 (int hi, int lo, unsigned char * utf8)
     return ucs2_to_utf8 (C, utf8);
 }
 
+int
+unicode_to_surrogates (unsigned unicode, unsigned * hi_ptr, unsigned * lo_ptr)
+{
+    unsigned hi = 0xD800;
+    unsigned lo = 0xDC00;
+    if (unicode < 0x10000) {
+	/* Doesn't need to be a surrogate pair, let's recycle this
+	   constant here. */
+	return UNICODE_NOT_SURROGATE_PAIR;
+    }
+    unicode -= 0x10000;
+    hi |= ((unicode >>10) & 0x3ff);
+    lo |= ((unicode) & 0x3ff);
+    * hi_ptr = hi;
+    * lo_ptr = lo;
+    return UNICODE_OK;
+}
+
 /* Given a count of Unicode characters "n_chars", return the number of
    bytes. A negative value indicates some kind of error. */
 
@@ -160,7 +181,7 @@ int unicode_count_chars (const unsigned char * utf8)
             return chars;
         }
     }
-    return -1;
+    return UNICODE_BAD_INPUT;
 }
 
 #ifdef TEST
@@ -234,6 +255,31 @@ test_invalid_utf8 (int * count)
 	"invalid UTF-8 gives incorrect result");
 }
 
+static void
+test_surrogate_pairs (int * count)
+{
+    unsigned nogood = 0x3000;
+    /* Test against examples from
+       https://en.wikipedia.org/wiki/UTF-16#Examples. */
+    unsigned wikipedia_1 = 0x10437;
+    unsigned wikipedia_2 = 0x24b62;
+    int status;
+    unsigned hi;
+    unsigned lo;
+    status = unicode_to_surrogates (nogood, & hi, & lo);
+    OK (status == UNICODE_NOT_SURROGATE_PAIR, (*count),
+	"low value to surrogate pair breaker returns error");
+    status = unicode_to_surrogates (wikipedia_1, & hi, & lo);
+    OK (status == UNICODE_OK, (*count), "Ok with %X", wikipedia_1);
+    OK (hi == 0xD801, (*count), "Got expected %X == 0xD801", hi);
+    OK (lo == 0xDC37, (*count), "Got expected %X == 0xDC37", lo);
+
+    status = unicode_to_surrogates (wikipedia_2, & hi, & lo);
+    OK (status == UNICODE_OK, (*count), "Ok with %X", wikipedia_1);
+    OK (hi == 0xD852, (*count), "Got expected %X == 0xD852", hi);
+    OK (lo == 0xDF62, (*count), "Got expected %X == 0xDF62", lo);
+}
+
 int main ()
 {
     /* Test counter for TAP. */
@@ -253,6 +299,7 @@ int main ()
     int cc = unicode_count_chars (utf8);
     OK (cc == 7, count, "get seven characters for utf8");
     test_invalid_utf8 (& count);
+    test_surrogate_pairs (& count);
     printf ("1..%d\n", count);
 }
 

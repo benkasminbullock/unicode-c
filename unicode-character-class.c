@@ -37,6 +37,14 @@ int utf8_is_kana_chars (const unsigned char * utf8, int len)
     return 1;
 }
 
+int utf16_is_kanji (int utf16)
+{
+    if (utf16 < 0x4e00 || utf16 > 0x9fff) {
+	return 0;
+    }
+    return 1;
+}
+
 #ifdef TEST
 
 #define OK(test, counter, message, ...) {	\
