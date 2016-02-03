@@ -263,12 +263,16 @@ test_surrogate_pairs (int * count)
        https://en.wikipedia.org/wiki/UTF-16#Examples. */
     unsigned wikipedia_1 = 0x10437;
     unsigned wikipedia_2 = 0x24b62;
+    unsigned json_spec = 0x1D11E;
     int status;
     unsigned hi;
     unsigned lo;
+
     status = unicode_to_surrogates (nogood, & hi, & lo);
+
     OK (status == UNICODE_NOT_SURROGATE_PAIR, (*count),
 	"low value to surrogate pair breaker returns error");
+
     status = unicode_to_surrogates (wikipedia_1, & hi, & lo);
     OK (status == UNICODE_OK, (*count), "Ok with %X", wikipedia_1);
     OK (hi == 0xD801, (*count), "Got expected %X == 0xD801", hi);
@@ -278,6 +282,11 @@ test_surrogate_pairs (int * count)
     OK (status == UNICODE_OK, (*count), "Ok with %X", wikipedia_1);
     OK (hi == 0xD852, (*count), "Got expected %X == 0xD852", hi);
     OK (lo == 0xDF62, (*count), "Got expected %X == 0xDF62", lo);
+
+    status = unicode_to_surrogates (json_spec, & hi, & lo);
+    OK (status == UNICODE_OK, (*count), "Ok with %X", json_spec);
+    OK (hi == 0xD834, (*count), "Got expected %X == 0xD834", hi);
+    OK (lo == 0xDd1e, (*count), "Got expected %X == 0xDD1e", lo);
 }
 
 int main ()
