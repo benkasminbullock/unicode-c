@@ -184,6 +184,205 @@ int unicode_count_chars (const unsigned char * utf8)
     return UNICODE_BAD_INPUT;
 }
 
+/* From the Json3 project. */
+
+#ifdef HEADER
+#define VALID_UTF8 1
+#define INVALID_UTF8 0
+#endif /* def HEADER */
+
+#define BYTE_80_8F \
+      0x80: case 0x81: case 0x82: case 0x83: case 0x84: case 0x85: case 0x86:\
+ case 0x87: case 0x88: case 0x89: case 0x8A: case 0x8B: case 0x8C: case 0x8D:\
+ case 0x8E: case 0x8F
+#define BYTE_80_9F \
+      0x80: case 0x81: case 0x82: case 0x83: case 0x84: case 0x85: case 0x86:\
+ case 0x87: case 0x88: case 0x89: case 0x8A: case 0x8B: case 0x8C: case 0x8D:\
+ case 0x8E: case 0x8F: case 0x90: case 0x91: case 0x92: case 0x93: case 0x94:\
+ case 0x95: case 0x96: case 0x97: case 0x98: case 0x99: case 0x9A: case 0x9B:\
+ case 0x9C: case 0x9D: case 0x9E: case 0x9F
+#define BYTE_80_BF \
+      0x80: case 0x81: case 0x82: case 0x83: case 0x84: case 0x85: case 0x86:\
+ case 0x87: case 0x88: case 0x89: case 0x8A: case 0x8B: case 0x8C: case 0x8D:\
+ case 0x8E: case 0x8F: case 0x90: case 0x91: case 0x92: case 0x93: case 0x94:\
+ case 0x95: case 0x96: case 0x97: case 0x98: case 0x99: case 0x9A: case 0x9B:\
+ case 0x9C: case 0x9D: case 0x9E: case 0x9F: case 0xA0: case 0xA1: case 0xA2:\
+ case 0xA3: case 0xA4: case 0xA5: case 0xA6: case 0xA7: case 0xA8: case 0xA9:\
+ case 0xAA: case 0xAB: case 0xAC: case 0xAD: case 0xAE: case 0xAF: case 0xB0:\
+ case 0xB1: case 0xB2: case 0xB3: case 0xB4: case 0xB5: case 0xB6: case 0xB7:\
+ case 0xB8: case 0xB9: case 0xBA: case 0xBB: case 0xBC: case 0xBD: case 0xBE:\
+ case 0xBF
+#define BYTE_90_BF \
+      0x90: case 0x91: case 0x92: case 0x93: case 0x94: case 0x95: case 0x96:\
+ case 0x97: case 0x98: case 0x99: case 0x9A: case 0x9B: case 0x9C: case 0x9D:\
+ case 0x9E: case 0x9F: case 0xA0: case 0xA1: case 0xA2: case 0xA3: case 0xA4:\
+ case 0xA5: case 0xA6: case 0xA7: case 0xA8: case 0xA9: case 0xAA: case 0xAB:\
+ case 0xAC: case 0xAD: case 0xAE: case 0xAF: case 0xB0: case 0xB1: case 0xB2:\
+ case 0xB3: case 0xB4: case 0xB5: case 0xB6: case 0xB7: case 0xB8: case 0xB9:\
+ case 0xBA: case 0xBB: case 0xBC: case 0xBD: case 0xBE: case 0xBF
+#define BYTE_A0_BF \
+      0xA0: case 0xA1: case 0xA2: case 0xA3: case 0xA4: case 0xA5: case 0xA6:\
+ case 0xA7: case 0xA8: case 0xA9: case 0xAA: case 0xAB: case 0xAC: case 0xAD:\
+ case 0xAE: case 0xAF: case 0xB0: case 0xB1: case 0xB2: case 0xB3: case 0xB4:\
+ case 0xB5: case 0xB6: case 0xB7: case 0xB8: case 0xB9: case 0xBA: case 0xBB:\
+ case 0xBC: case 0xBD: case 0xBE: case 0xBF
+#define BYTE_C2_DF \
+      0xC2: case 0xC3: case 0xC4: case 0xC5: case 0xC6: case 0xC7: case 0xC8:\
+ case 0xC9: case 0xCA: case 0xCB: case 0xCC: case 0xCD: case 0xCE: case 0xCF:\
+ case 0xD0: case 0xD1: case 0xD2: case 0xD3: case 0xD4: case 0xD5: case 0xD6:\
+ case 0xD7: case 0xD8: case 0xD9: case 0xDA: case 0xDB: case 0xDC: case 0xDD:\
+ case 0xDE: case 0xDF
+#define BYTE_E1_EC \
+      0xE1: case 0xE2: case 0xE3: case 0xE4: case 0xE5: case 0xE6: case 0xE7:\
+ case 0xE8: case 0xE9: case 0xEA: case 0xEB: case 0xEC
+#define BYTE_EE_EF \
+      0xEE: case 0xEF
+#define BYTE_F1_F3 \
+      0xF1: case 0xF2: case 0xF3
+
+#define ADDBYTE i++
+
+#define FAILUTF8(want) return INVALID_UTF8
+
+#define NEXTBYTE c=input[i]
+
+int
+valid_utf8 (const unsigned char * input, int input_length)
+{
+    int i;
+    unsigned char c;
+
+    i = 0;
+
+ string_start:
+
+    i++;
+    if (i >= input_length) {
+	return VALID_UTF8;
+    }
+    /* Set c separately here since we use a range comparison before
+       the switch statement. */
+    c = input[i];
+
+    /* Admit all bytes <= 0x80. */
+    if (c <= 0x80) {
+	goto string_start;
+    }
+
+    switch (c) {
+    case BYTE_C2_DF:
+	ADDBYTE;
+	goto byte_last_80_bf;
+	    
+    case 0xE0:
+	ADDBYTE;
+	goto byte23_a0_bf;
+	    
+    case BYTE_E1_EC:
+	ADDBYTE;
+	goto byte_penultimate_80_bf;
+	    
+    case 0xED:
+	ADDBYTE;
+	goto byte23_80_9f;
+	    
+    case BYTE_EE_EF:
+	ADDBYTE;
+	goto byte_penultimate_80_bf;
+	    
+    case 0xF0:
+	ADDBYTE;
+	goto byte24_90_bf;
+	    
+    case BYTE_F1_F3:
+	ADDBYTE;
+	goto byte24_80_bf;
+	    
+    case 0xF4:
+	ADDBYTE;
+	goto byte24_80_8f;
+
+    }
+
+ byte_last_80_bf:
+
+    switch (NEXTBYTE) {
+
+    case BYTE_80_BF:
+	ADDBYTE;
+	goto string_start;
+    default:
+	FAILUTF8(XBYTES_80_BF);
+    }
+
+ byte_penultimate_80_bf:
+
+    switch (NEXTBYTE) {
+
+    case BYTE_80_BF:
+	ADDBYTE;
+	goto byte_last_80_bf;
+    default:
+	FAILUTF8(XBYTES_80_BF);
+    }
+
+ byte24_90_bf:
+
+    switch (NEXTBYTE) {
+
+    case BYTE_90_BF:
+	ADDBYTE;
+	goto byte_penultimate_80_bf;
+    default:
+	FAILUTF8(XBYTES_90_BF);
+    }
+
+ byte23_80_9f:
+
+    switch (NEXTBYTE) {
+
+    case BYTE_80_9F:
+	ADDBYTE;
+	goto byte_last_80_bf;
+    default:
+	FAILUTF8(XBYTES_80_9F);
+    }
+
+ byte23_a0_bf:
+
+    switch (NEXTBYTE) {
+
+    case BYTE_A0_BF:
+	ADDBYTE;
+	goto byte_last_80_bf;
+    default:
+	FAILUTF8(XBYTES_A0_BF);
+    }
+
+ byte24_80_bf:
+
+    switch (NEXTBYTE) {
+
+    case BYTE_80_BF:
+	ADDBYTE;
+	goto byte_penultimate_80_bf;
+    default:
+	FAILUTF8(XBYTES_80_BF);
+    }
+
+ byte24_80_8f:
+
+    switch (NEXTBYTE) {
+
+    case BYTE_80_8F:
+	ADDBYTE;
+	goto byte_penultimate_80_bf;
+    default:
+	FAILUTF8(XBYTES_80_8F);
+    }
+}
+
+
 #ifdef TEST
 
 void print_bytes (const unsigned char * bytes)

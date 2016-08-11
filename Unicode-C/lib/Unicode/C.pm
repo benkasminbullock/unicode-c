@@ -9,5 +9,5 @@ require Exporter;
 @EXPORT_OK = qw//;
 use warnings;
 use strict;
-our $VERSION = 0.01;
+our $VERSION = '0.01';
 1;
