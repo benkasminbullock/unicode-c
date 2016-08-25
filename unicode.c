@@ -240,11 +240,11 @@ int unicode_count_chars (const unsigned char * utf8)
 #define BYTE_F1_F3 \
       0xF1: case 0xF2: case 0xF3
 
-#define ADDBYTE i++
+#define UNICODEADDBYTE i++
 
-#define FAILUTF8(want) return INVALID_UTF8
+#define UNICODEFAILUTF8(want) return INVALID_UTF8
 
-#define NEXTBYTE c=input[i]
+#define UNICODENEXTBYTE c=input[i]
 
 int
 valid_utf8 (const unsigned char * input, int input_length)
@@ -271,114 +271,114 @@ valid_utf8 (const unsigned char * input, int input_length)
 
     switch (c) {
     case BYTE_C2_DF:
-	ADDBYTE;
+	UNICODEADDBYTE;
 	goto byte_last_80_bf;
 	    
     case 0xE0:
-	ADDBYTE;
+	UNICODEADDBYTE;
 	goto byte23_a0_bf;
 	    
     case BYTE_E1_EC:
-	ADDBYTE;
+	UNICODEADDBYTE;
 	goto byte_penultimate_80_bf;
 	    
     case 0xED:
-	ADDBYTE;
+	UNICODEADDBYTE;
 	goto byte23_80_9f;
 	    
     case BYTE_EE_EF:
-	ADDBYTE;
+	UNICODEADDBYTE;
 	goto byte_penultimate_80_bf;
 	    
     case 0xF0:
-	ADDBYTE;
+	UNICODEADDBYTE;
 	goto byte24_90_bf;
 	    
     case BYTE_F1_F3:
-	ADDBYTE;
+	UNICODEADDBYTE;
 	goto byte24_80_bf;
 	    
     case 0xF4:
-	ADDBYTE;
+	UNICODEADDBYTE;
 	goto byte24_80_8f;
 
     }
 
  byte_last_80_bf:
 
-    switch (NEXTBYTE) {
+    switch (UNICODENEXTBYTE) {
 
     case BYTE_80_BF:
-	ADDBYTE;
+	UNICODEADDBYTE;
 	goto string_start;
     default:
-	FAILUTF8(XBYTES_80_BF);
+	UNICODEFAILUTF8 (XBYTES_80_BF);
     }
 
  byte_penultimate_80_bf:
 
-    switch (NEXTBYTE) {
+    switch (UNICODENEXTBYTE) {
 
     case BYTE_80_BF:
-	ADDBYTE;
+	UNICODEADDBYTE;
 	goto byte_last_80_bf;
     default:
-	FAILUTF8(XBYTES_80_BF);
+	UNICODEFAILUTF8 (XBYTES_80_BF);
     }
 
  byte24_90_bf:
 
-    switch (NEXTBYTE) {
+    switch (UNICODENEXTBYTE) {
 
     case BYTE_90_BF:
-	ADDBYTE;
+	UNICODEADDBYTE;
 	goto byte_penultimate_80_bf;
     default:
-	FAILUTF8(XBYTES_90_BF);
+	UNICODEFAILUTF8 (XBYTES_90_BF);
     }
 
  byte23_80_9f:
 
-    switch (NEXTBYTE) {
+    switch (UNICODENEXTBYTE) {
 
     case BYTE_80_9F:
-	ADDBYTE;
+	UNICODEADDBYTE;
 	goto byte_last_80_bf;
     default:
-	FAILUTF8(XBYTES_80_9F);
+	UNICODEFAILUTF8 (XBYTES_80_9F);
     }
 
  byte23_a0_bf:
 
-    switch (NEXTBYTE) {
+    switch (UNICODENEXTBYTE) {
 
     case BYTE_A0_BF:
-	ADDBYTE;
+	UNICODEADDBYTE;
 	goto byte_last_80_bf;
     default:
-	FAILUTF8(XBYTES_A0_BF);
+	UNICODEFAILUTF8 (XBYTES_A0_BF);
     }
 
  byte24_80_bf:
 
-    switch (NEXTBYTE) {
+    switch (UNICODENEXTBYTE) {
 
     case BYTE_80_BF:
-	ADDBYTE;
+	UNICODEADDBYTE;
 	goto byte_penultimate_80_bf;
     default:
-	FAILUTF8(XBYTES_80_BF);
+	UNICODEFAILUTF8 (XBYTES_80_BF);
     }
 
  byte24_80_8f:
 
-    switch (NEXTBYTE) {
+    switch (UNICODENEXTBYTE) {
 
     case BYTE_80_8F:
-	ADDBYTE;
+	UNICODEADDBYTE;
 	goto byte_penultimate_80_bf;
     default:
-	FAILUTF8(XBYTES_80_8F);
+	UNICODEFAILUTF8 (XBYTES_80_8F);
     }
 }
 
