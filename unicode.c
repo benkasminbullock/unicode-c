@@ -27,8 +27,8 @@
 
 int utf8_to_ucs2 (const unsigned char * input, const unsigned char ** end_ptr)
 {
-    *end_ptr = input;
     unsigned char c;
+    *end_ptr = input;
     c = input[0];
     if (c == 0) {
         return UNICODE_EMPTY_INPUT;
@@ -66,6 +66,7 @@ int utf8_to_ucs2 (const unsigned char * input, const unsigned char ** end_ptr)
 	if ((v & 0x000FBFBE) == 0x000FBFBE) {
 	    return UNICODE_NOT_CHARACTER;
 	}
+        * end_ptr = input + 4;
 	return v;
     }
     if ((c & 0xE0) == 0xE0) {
@@ -458,8 +459,13 @@ void test_ucs2_to_utf8 (const unsigned char * input, int * count)
         int bytes;
         const unsigned char * end;
         unicode = utf8_to_ucs2 (start, & end);
-        if (unicode == -1) {
+        if (unicode == UNICODE_EMPTY_INPUT) {
             break;
+	}
+	if (unicode < 0) {
+	    fprintf (stderr, "%s:%d: unexpected error %d converting unicode.\n",
+		     __FILE__, __LINE__, unicode);
+	    exit (EXIT_FAILURE);
 	}
         bytes = ucs2_to_utf8 (unicode, offset);
 	OK (bytes > 0, (*count), "no bad conversion");
