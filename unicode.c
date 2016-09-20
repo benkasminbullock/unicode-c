@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdint.h>
 #include "unicode.h"
 
 #ifdef HEADER
@@ -10,6 +11,10 @@
 #define UNICODE_NOT_SURROGATE_PAIR -3
 #define UNICODE_BAD_UTF8 -4
 #define UNICODE_EMPTY_INPUT -5
+#define UNICODE_NON_SHORTEST -6
+#define UNICODE_TOO_BIG -7
+#define UNICODE_NOT_CHARACTER -8
+
 /* For routines which don't need a return value. */
 #define UNICODE_OK 0
 #endif /* def HEADER */
@@ -23,15 +28,47 @@
 int utf8_to_ucs2 (const unsigned char * input, const unsigned char ** end_ptr)
 {
     *end_ptr = input;
-    if (input[0] == 0) {
-        return -1;
+    unsigned char c;
+    c = input[0];
+    if (c == 0) {
+        return UNICODE_EMPTY_INPUT;
     }
-    if (input[0] < 0x80) {
+    if (c < 0x80) {
 	/* One byte (ASCII) case. */
         * end_ptr = input + 1;
-        return input[0];
+        return c;
     }
-    if ((input[0] & 0xE0) == 0xE0) {
+    if ((c & 0xF0) == 0xF0) {
+	/* Four byte case. */
+	unsigned char d, e, f;
+	uint32_t v;
+	d = input[1];
+	e = input[2];
+	f = input[3];
+
+	/* https://metacpan.org/source/CHANSEN/Unicode-UTF8-0.60/UTF8.xs#L117 */
+	v = ((c & 0x07) << 18)
+	    | ((d & 0x3F) << 12)
+	    | ((e & 0x3F) <<  6)
+	    | ((f & 0x3F));
+	if ((v & 0xF8C0C0C0) != 0xF0808080) {
+	    return UNICODE_BAD_UTF8;
+	}
+	/* Non-shortest form */
+	if (v < 0xF0908080) {
+	    return UNICODE_NON_SHORTEST;
+	}
+	/* Greater than U+10FFFF */
+	if (v > 0xF48FBFBF) {
+	    return UNICODE_TOO_BIG;
+	}
+	/* Non-characters U+nFFFE..U+nFFFF on plane 1-16 */
+	if ((v & 0x000FBFBE) == 0x000FBFBE) {
+	    return UNICODE_NOT_CHARACTER;
+	}
+	return v;
+    }
+    if ((c & 0xE0) == 0xE0) {
 	/* Three byte case. */
         if (input[1] < 0x80 || input[1] > 0xBF ||
 	    input[2] < 0x80 || input[2] > 0xBF) {
@@ -39,18 +76,18 @@ int utf8_to_ucs2 (const unsigned char * input, const unsigned char ** end_ptr)
 	}
         * end_ptr = input + 3;
         return
-            (input[0] & 0x0F)<<12 |
+            (c & 0x0F)<<12 |
             (input[1] & 0x3F)<<6  |
             (input[2] & 0x3F);
     }
-    if ((input[0] & 0xC0) == 0xC0) {
+    if ((c & 0xC0) == 0xC0) {
 	/* Two byte case. */
         if (input[1] < 0x80 || input[1] > 0xBF) {
             return UNICODE_BAD_UTF8;
 	}
         * end_ptr = input + 2;
         return
-            (input[0] & 0x1F)<<6  |
+            (c & 0x1F)<<6  |
             (input[1] & 0x3F);
     }
     return UNICODE_BAD_INPUT;
