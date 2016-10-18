@@ -5,7 +5,8 @@
 #include "unicode.h"
 
 #ifdef HEADER
-#define UTF8_MAX_LENGTH 4
+/* This length includes one trailing nul byte. */
+#define UTF8_MAX_LENGTH 5
 #define UNICODE_BAD_INPUT -1
 #define UNICODE_SURROGATE_PAIR -2
 #define UNICODE_NOT_SURROGATE_PAIR -3
@@ -15,9 +16,76 @@
 #define UNICODE_TOO_BIG -7
 #define UNICODE_NOT_CHARACTER -8
 
+/* The maximum value which is allowed. */
+
+#define UNICODE_MAXIMUM 0x10ffff
+
+/* The maximum value which will fit into four bytes of UTF-8. */
+
+#define UNICODE_UTF8_4 0x1fffff
+
 /* For routines which don't need a return value. */
 #define UNICODE_OK 0
 #endif /* def HEADER */
+
+/* How many bytes to expect. */
+
+int utf8_bytes (unsigned char c)
+{
+    if (c < 0x80) {
+	return 1;
+    }
+    if ((c & 0xF0) == 0xF0) {
+	return 4;
+    }
+    if ((c & 0xE0) == 0xE0) {
+	return 3;
+    }
+    if ((c & 0xC0) == 0xC0) {
+	return 2;
+    }
+    return UNICODE_BAD_UTF8;
+}
+
+/* Give the values even if the input is partly broken. */
+
+int utf8_no_checks (const unsigned char * input, const unsigned char ** end_ptr)
+{
+    unsigned char c;
+    c = input[0];
+    if (c < 0x80) {
+	/* One byte (ASCII) case. */
+        * end_ptr = input + 1;
+        return c;
+    }
+    if ((c & 0xF0) == 0xF0) {
+	unsigned char d, e, f;
+	uint32_t v;
+	d = input[1];
+	e = input[2];
+	f = input[3];
+	v = ((c & 0x07) << 18)
+	    | ((d & 0x3F) << 12)
+	    | ((e & 0x3F) <<  6)
+	    | ((f & 0x3F));
+        * end_ptr = input + 4;
+	return v;
+    }
+    if ((c & 0xE0) == 0xE0) {
+        * end_ptr = input + 3;
+        return
+            (c & 0x0F)<<12 |
+            (input[1] & 0x3F)<<6  |
+            (input[2] & 0x3F);
+    }
+    if ((c & 0xC0) == 0xC0) {
+        * end_ptr = input + 2;
+        return
+            (c & 0x1F)<<6  |
+            (input[1] & 0x3F);
+    }
+    return UNICODE_BAD_INPUT;
+}
 
 /* Convert a UTF-8 encoded character in "input" into a number. This
    function returns the unicode value of the UTF-8 character if
@@ -46,24 +114,31 @@ int utf8_to_ucs2 (const unsigned char * input, const unsigned char ** end_ptr)
 	e = input[2];
 	f = input[3];
 
-	/* https://metacpan.org/source/CHANSEN/Unicode-UTF8-0.60/UTF8.xs#L117 */
+	if (/* c must be 11110xxx. */
+	    c >= 0xf8 ||
+	    /* d, e, f must be 10xxxxxx. */
+	    d < 0x80 || d >= 0xC0 ||
+	    e < 0x80 || e >= 0xC0 ||
+	    f < 0x80 || f >= 0xC0) {
+	    return UNICODE_BAD_UTF8;
+	}
+	if (c == 0xf0 && d < 0x90) { 
+	    /* We don't need to check the values of e and d, because
+	       the if statement above this one already guarantees that
+	       e and d are 10xxxxxx. */
+	    return UNICODE_NON_SHORTEST;
+	}
+	/* Calculate the code point. */
 	v = ((c & 0x07) << 18)
 	    | ((d & 0x3F) << 12)
 	    | ((e & 0x3F) <<  6)
 	    | ((f & 0x3F));
-	if ((v & 0xF8C0C0C0) != 0xF0808080) {
-	    return UNICODE_BAD_UTF8;
-	}
-	/* Non-shortest form */
-	if (v < 0xF0908080) {
-	    return UNICODE_NON_SHORTEST;
-	}
 	/* Greater than U+10FFFF */
-	if (v > 0xF48FBFBF) {
+	if (v > UNICODE_MAXIMUM) {
 	    return UNICODE_TOO_BIG;
 	}
 	/* Non-characters U+nFFFE..U+nFFFF on plane 1-16 */
-	if ((v & 0x000FBFBE) == 0x000FBFBE) {
+	if ((v & 0xffff) >= 0xfffe) {
 	    return UNICODE_NOT_CHARACTER;
 	}
         * end_ptr = input + 4;
@@ -75,6 +150,12 @@ int utf8_to_ucs2 (const unsigned char * input, const unsigned char ** end_ptr)
 	    input[2] < 0x80 || input[2] > 0xBF) {
             return UNICODE_BAD_UTF8;
 	}
+	if (c == 0xe0 && input[1] < 0xa0) { 
+	    /* We don't need to check the value of input[2], because
+	       the if statement above this one already guarantees that
+	       it is 10xxxxxx. */
+	    return UNICODE_NON_SHORTEST;
+	}
         * end_ptr = input + 3;
         return
             (c & 0x0F)<<12 |
@@ -85,6 +166,9 @@ int utf8_to_ucs2 (const unsigned char * input, const unsigned char ** end_ptr)
 	/* Two byte case. */
         if (input[1] < 0x80 || input[1] > 0xBF) {
             return UNICODE_BAD_UTF8;
+	}
+	if (c <= 0xC1) {
+	    return UNICODE_NON_SHORTEST;
 	}
         * end_ptr = input + 2;
         return
@@ -118,17 +202,17 @@ int ucs2_to_utf8 (int ucs2, unsigned char * utf8)
         return 2;
     }
     if (ucs2 >= 0x800 && ucs2 < 0xFFFF) {
-	if (ucs2 >= 0xD800 && ucs2 <= 0xDFFF) {
-	    /* Ill-formed. */
-	    return UNICODE_SURROGATE_PAIR;
-	}
         utf8[0] = ((ucs2 >> 12)       ) | 0xE0;
         utf8[1] = ((ucs2 >> 6 ) & 0x3F) | 0x80;
         utf8[2] = ((ucs2      ) & 0x3F) | 0x80;
         utf8[3] = '\0';
+	if (ucs2 >= 0xD800 && ucs2 <= 0xDFFF) {
+	    /* Ill-formed. */
+	    return UNICODE_SURROGATE_PAIR;
+	}
         return 3;
     }
-    if (ucs2 >= 0x10000 && ucs2 < 0x10FFFF) {
+    if (ucs2 >= 0x10000 && ucs2 <= UNICODE_UTF8_4) {
 	/* http://tidy.sourceforge.net/cgi-bin/lxr/source/src/utf8.c#L380 */
 	utf8[0] = 0xF0 | (ucs2 >> 18);
 	utf8[1] = 0x80 | ((ucs2 >> 12) & 0x3F);
@@ -162,11 +246,16 @@ int surrogate_to_utf8 (int hi, int lo, unsigned char * utf8)
     return ucs2_to_utf8 (C, utf8);
 }
 
+#define UNI_SUR_HIGH_START  0xD800
+#define UNI_SUR_HIGH_END    0xDBFF
+#define UNI_SUR_LOW_START   0xDC00
+#define UNI_SUR_LOW_END     0xDFFF
+
 int
 unicode_to_surrogates (unsigned unicode, unsigned * hi_ptr, unsigned * lo_ptr)
 {
-    unsigned hi = 0xD800;
-    unsigned lo = 0xDC00;
+    unsigned hi = UNI_SUR_HIGH_START;
+    unsigned lo = UNI_SUR_LOW_START;
     if (unicode < 0x10000) {
 	/* Doesn't need to be a surrogate pair, let's recycle this
 	   constant here. */
@@ -178,6 +267,28 @@ unicode_to_surrogates (unsigned unicode, unsigned * hi_ptr, unsigned * lo_ptr)
     * hi_ptr = hi;
     * lo_ptr = lo;
     return UNICODE_OK;
+}
+
+/* Convert hi/lo surrogate pair to a single Unicode value. */
+
+/* https://android.googlesource.com/platform/external/id3lib/+/master/unicode.org/ConvertUTF.c */
+
+static const int halfShift  = 10; /* used for shifting by 10 bits */
+static const uint32_t halfBase = 0x0010000UL;
+
+int
+surrogates_to_unicode (unsigned hi, unsigned lo)
+{
+    uint32_t u;
+    if (hi >= UNI_SUR_HIGH_START && hi <= UNI_SUR_HIGH_END) {
+	/* If it's a low surrogate, convert to UTF32. */
+	if (lo >= UNI_SUR_LOW_START && lo <= UNI_SUR_LOW_END) {
+	    u = ((hi - UNI_SUR_HIGH_START) << halfShift)
+	      + (lo - UNI_SUR_LOW_START) + halfBase;
+	    return u;
+	}
+    }
+    return UNICODE_NOT_SURROGATE_PAIR;
 }
 
 /* Given a count of Unicode characters "n_chars", return the number of
@@ -465,6 +576,7 @@ void test_ucs2_to_utf8 (const unsigned char * input, int * count)
 	if (unicode < 0) {
 	    fprintf (stderr, "%s:%d: unexpected error %d converting unicode.\n",
 		     __FILE__, __LINE__, unicode);
+	    // exit ok in test
 	    exit (EXIT_FAILURE);
 	}
         bytes = ucs2_to_utf8 (unicode, offset);
@@ -509,6 +621,7 @@ test_surrogate_pairs (int * count)
     int status;
     unsigned hi;
     unsigned lo;
+    int rt;
 
     status = unicode_to_surrogates (nogood, & hi, & lo);
 
@@ -519,16 +632,25 @@ test_surrogate_pairs (int * count)
     OK (status == UNICODE_OK, (*count), "Ok with %X", wikipedia_1);
     OK (hi == 0xD801, (*count), "Got expected %X == 0xD801", hi);
     OK (lo == 0xDC37, (*count), "Got expected %X == 0xDC37", lo);
+    rt = surrogates_to_unicode (hi, lo);
+    OK (rt == wikipedia_1, (*count), "Round trip %X == initial %X",
+	rt, wikipedia_1);
 
     status = unicode_to_surrogates (wikipedia_2, & hi, & lo);
     OK (status == UNICODE_OK, (*count), "Ok with %X", wikipedia_1);
     OK (hi == 0xD852, (*count), "Got expected %X == 0xD852", hi);
     OK (lo == 0xDF62, (*count), "Got expected %X == 0xDF62", lo);
+    rt = surrogates_to_unicode (hi, lo);
+    OK (rt == wikipedia_2, (*count), "Round trip %X == initial %X",
+	rt, wikipedia_2);
 
     status = unicode_to_surrogates (json_spec, & hi, & lo);
     OK (status == UNICODE_OK, (*count), "Ok with %X", json_spec);
     OK (hi == 0xD834, (*count), "Got expected %X == 0xD834", hi);
     OK (lo == 0xDd1e, (*count), "Got expected %X == 0xDD1e", lo);
+    rt = surrogates_to_unicode (hi, lo);
+    OK (rt == json_spec, (*count), "Round trip %X == initial %X",
+	rt, json_spec);
 }
 
 int main ()
