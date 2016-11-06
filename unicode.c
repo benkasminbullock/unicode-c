@@ -16,30 +16,58 @@
 /* This length includes one trailing nul byte. */
 #define UTF8_MAX_LENGTH 5
 #define UNICODE_BAD_INPUT -1
+
+/* An illegal surrogate pair code was attempted to turn into UTF-8. */
+
 #define UNICODE_SURROGATE_PAIR -2
+
+/* Values not forming a surrogate pair were tried to be converted as
+   if they were a surrogate pair. */
+
 #define UNICODE_NOT_SURROGATE_PAIR -3
+
+/* Input which was supposed to be UTF-8 encoded was not. */
+
 #define UNICODE_BAD_UTF8 -4
+
+/* A string of UTF-8 bytes turned out to contain a zero as its first
+   byte. */
+
 #define UNICODE_EMPTY_INPUT -5
+
+/* Some UTF-8 bytes were not in the shortest possible form. */
+
 #define UNICODE_NON_SHORTEST -6
+
+/* There was an attempt to convert a code point which was greater than
+   UNICODE_UTF8_4 into UTF-8 bytes. */
+
 #define UNICODE_TOO_BIG -7
+
+/* The Unicode code-point ended with either 0xFFFF or 0xFFFE, meaning
+   it cannot e used as a character code point. */
+
 #define UNICODE_NOT_CHARACTER -8
 
-/* The maximum value which is allowed. */
+/* The maximum possible value of a Unicode code point. */
 
 #define UNICODE_MAXIMUM 0x10ffff
 
-/* The maximum value which will fit into four bytes of UTF-8. */
+/* The maximum possible value which will fit into four bytes of
+   UTF-8. This is larger than UNICODE_MAXIMUM. */
 
 #define UNICODE_UTF8_4 0x1fffff
 
 /* For routines which don't use the return value to communicate back
    to the caller, this return value indicates a successful
    completion. */
+
 #define UNICODE_OK 0
 #endif /* def HEADER */
 
 /* The return value is how many bytes of UTF-8 character point "c"
-   will become. */
+   will become. If "c" is not a valid UTF-8 byte, the value
+   UNICODE_BAD_UTF8 is returned. */
 
 int utf8_bytes (unsigned char c)
 {
@@ -236,7 +264,7 @@ int ucs2_to_utf8 (int ucs2, unsigned char * utf8)
         utf8[4] = '\0';
         return 4;
     }
-    return UNICODE_BAD_INPUT;
+    return UNICODE_TOO_BIG;
 }
 
 /* Convert surrogate pairs to UTF-8. */
@@ -272,9 +300,9 @@ int surrogate_to_utf8 (int hi, int lo, unsigned char * utf8)
    Return value:
 
    If "unicode" does not need to be a surrogate pair, the error
-   UNICODE_NOT_SURROGATE_PAIR (-3) is returned, and the values of
-   "*hi_ptr" and "*lo_ptr" are undefined. If the conversion is
-   successful, UNICODE_OK (0) is returned. */
+   UNICODE_NOT_SURROGATE_PAIR is returned, and the values of "*hi_ptr"
+   and "*lo_ptr" are undefined. If the conversion is successful,
+   UNICODE_OK is returned. */
 
 int
 unicode_to_surrogates (unsigned unicode, unsigned * hi_ptr, unsigned * lo_ptr)
@@ -323,8 +351,8 @@ surrogates_to_unicode (unsigned hi, unsigned lo)
 /* Given a nul-terminated string "utf8" and a number of Unicode
    characters "n_chars", return the number of bytes into "utf8" at
    which the end of the characters occurs. A negative value indicates
-   some kind of error. If the return value is UNICODE_EMPTY_INPUT
-   (-5), "utf8" contained a zero byte. This may also return any of the
+   some kind of error. If the return value is UNICODE_EMPTY_INPUT,
+   "utf8" contained a zero byte. This may also return any of the
    values of "utf8_to_ucs2". */
 
 int
@@ -350,8 +378,8 @@ unicode_chars_to_bytes (const unsigned char * utf8, int n_chars)
 
    Return value
 
-   This may return UNICODE_BAD_INPUT or any of the errors of
-   utf8_to_ucs2. */
+   If an error occurs, this may return UNICODE_BAD_INPUT or any of the
+   errors of "utf8_to_ucs2". */
 
 int unicode_count_chars (const unsigned char * utf8)
 {
@@ -372,6 +400,8 @@ int unicode_count_chars (const unsigned char * utf8)
             return chars;
         }
     }
+    /* Cannot be reached in practice, since strlen indicates the null
+       byte. */
     return UNICODE_BAD_INPUT;
 }
 
@@ -438,8 +468,8 @@ int unicode_count_chars (const unsigned char * utf8)
 #define UNICODENEXTBYTE c=input[i]
 
 /* Given "input" and "input_length", validate "input" byte by byte up
-   to "input_length". The return value may be VALID_UTF8 (1) or
-   INVALID_UTF8 (0). */
+   to "input_length". The return value may be VALID_UTF8 or
+   INVALID_UTF8. */
 
 int
 valid_utf8 (const unsigned char * input, int input_length)
@@ -577,6 +607,8 @@ valid_utf8 (const unsigned char * input, int input_length)
     }
 }
 
+/* Below this is code for testing which is not normally compiled. Use
+   "make test" to compile the testing version. */
 
 #ifdef TEST
 
