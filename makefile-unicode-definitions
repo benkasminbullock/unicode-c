@@ -1,3 +1,0 @@
-UNICODE_DIR = /share/projects/unicode-c
-UNICODE_INC = -I $(UNICODE_DIR)
-UNICODE_LIBS = -L $(UNICODE_DIR) -l unicode
