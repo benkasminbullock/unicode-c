@@ -699,16 +699,23 @@ test_invalid_utf8 (int * count)
 static void
 test_surrogate_pairs (int * count)
 {
-    unsigned nogood = 0x3000;
-    /* Test against examples from
-       https://en.wikipedia.org/wiki/UTF-16#Examples. */
-    unsigned wikipedia_1 = 0x10437;
-    unsigned wikipedia_2 = 0x24b62;
-    unsigned json_spec = 0x1D11E;
     int status;
     unsigned hi;
     unsigned lo;
     int rt;
+    /* This is the wide character space, which does not require
+       representation as a surrogate pair. */
+    unsigned nogood = 0x3000;
+    /* 
+       Two examples from the Wikipedia article on UTF-16
+       https://en.wikipedia.org/w/index.php?title=UTF-16&oldid=744329865#Examples. */
+    unsigned wikipedia_1 = 0x10437;
+    unsigned wikipedia_2 = 0x24b62;
+    /*
+      An example from the JSON RFC
+      http://rfc7159.net/rfc7159#rfc.section.7
+    */
+    unsigned json_spec = 0x1D11E;
 
     status = unicode_to_surrogates (nogood, & hi, & lo);
 
