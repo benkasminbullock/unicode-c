@@ -1,8 +1,8 @@
-/* This file is a simple Unicode library dealing with conversions to
-   and from the UTF-8 format. */
+/* This file is a Unicode library in the programming language C which
+   deals with conversions to and from the UTF-8 format. */
 
 /* 
-   Author: Ben Bullock <benkasminbullock@gmail.com>. 
+   Author: Ben Bullock <benkasminbullock@gmail.com>
    Repository: https://github.com/benkasminbullock/unicode-c
 */
 
@@ -405,12 +405,20 @@ int unicode_count_chars (const unsigned char * utf8)
     return UNICODE_BAD_INPUT;
 }
 
-/* From the Json3 project. */
-
 #ifdef HEADER
 #define VALID_UTF8 1
 #define INVALID_UTF8 0
 #endif /* def HEADER */
+
+#ifdef HEADER
+
+/* These are intended for use in switch statements, for example
+
+   switch (c) {
+   case BYTE_80_8F:
+       do_something;
+
+   They originally come from the Json3 project. */
 
 #define BYTE_80_8F \
       0x80: case 0x81: case 0x82: case 0x83: case 0x84: case 0x85: case 0x86:\
@@ -460,6 +468,7 @@ int unicode_count_chars (const unsigned char * utf8)
       0xEE: case 0xEF
 #define BYTE_F1_F3 \
       0xF1: case 0xF2: case 0xF3
+#endif /* def HEADER */
 
 #define UNICODEADDBYTE i++
 
