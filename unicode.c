@@ -1,6 +1,16 @@
 /* This file is a Unicode library in the programming language C which
    deals with conversions to and from the UTF-8 format. */
 
+/*
+  Author: 
+
+  Ben Bullock <benkasminbullock@gmail.com>, <bkb@cpan.org>
+
+  Repository: 
+  
+  https://github.com/benkasminbullock/unicode-c
+*/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
