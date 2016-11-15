@@ -31,7 +31,9 @@ The header file is under "Browse" then "unicode.h".
 * Testing:
 
 Compile with -DTEST or use "make test" to run the tests. The tests are
-contained in unicode.c itself. Please refer to the source code.
+contained in unicode.c itself. Please refer to the source
+code. Running the tests requires the "prove" utility which is part of
+Perl.
 
 * Documentation:
 
@@ -41,3 +43,15 @@ Documentation currently consists of the comments in the source code.
 
 Either send email or use the github "issues" pages to report bugs.
 
+* Known problems:
+
+** The library uses UCS2 where it should have said UTF-16, and similar
+   misnamings.
+
+** 0xFF is regarded as a valid UTF-8 first byte by some routines.
+
+* Online version
+
+There is an online web version of this software here:
+
+    http://www.lemoda.net/tools/uniconvert/index.html
