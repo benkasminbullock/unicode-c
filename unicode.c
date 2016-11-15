@@ -59,7 +59,8 @@
 
 #define UNICODE_BAD_INPUT -1
 
-/* An illegal surrogate pair code was attempted to turn into UTF-8. */
+/* An illegal surrogate pair code was attempted to be turned into
+   UTF-8. */
 
 #define UNICODE_SURROGATE_PAIR -2
 
@@ -91,7 +92,7 @@
 #define UNICODE_TOO_BIG -7
 
 /* The Unicode code-point ended with either 0xFFFF or 0xFFFE, meaning
-   it cannot e used as a character code point. */
+   it cannot be used as a character code point. */
 
 #define UNICODE_NOT_CHARACTER -8
 
@@ -119,7 +120,8 @@ int utf8_bytes (unsigned char c)
 }
 
 /* Try to convert "input" from UTF-8 to UCS-2, and return a value even
-   if the input is partly broken. */
+   if the input is partly broken.  This checks the first byte of the
+   input, but it doesn't check the subsequent bytes. */
 
 int
 utf8_no_checks (const unsigned char * input, const unsigned char ** end_ptr)
@@ -357,7 +359,7 @@ unicode_to_surrogates (unsigned unicode, unsigned * hi_ptr, unsigned * lo_ptr)
 /* Convert a surrogate pair in "hi" and "lo" to a single Unicode
    value. The return value is the Unicode value. If the return value
    is negative, an error has occurred. If "hi" and "lo" do not form a
-   surrogate pair, the error value UNICODE_NOT_SURROGATE_PAIR (-3) is
+   surrogate pair, the error value UNICODE_NOT_SURROGATE_PAIR is
    returned. */
 
 /* https://android.googlesource.com/platform/external/id3lib/+/master/unicode.org/ConvertUTF.c */
@@ -648,6 +650,12 @@ valid_utf8 (const unsigned char * input, int input_length)
     }
 }
 
+/*  _____         _       
+   |_   _|__  ___| |_ ___ 
+     | |/ _ \/ __| __/ __|
+     | |  __/\__ \ |_\__ \
+     |_|\___||___/\__|___/ */
+                       
 /* Below this is code for testing which is not normally compiled. Use
    "make test" to compile the testing version. */
 
@@ -721,12 +729,15 @@ test_invalid_utf8 (int * count)
 {
     unsigned char invalid_utf8[UTF8_MAX_LENGTH];
     int unicode;
+    int valid;
     const unsigned char * end;
     snprintf ((char *) invalid_utf8, UTF8_MAX_LENGTH - 1,
 	      "%c%c%c", 0xe8, 0xe4, 0xe5);
     unicode = utf8_to_ucs2 (invalid_utf8, & end);
     OK (unicode == UNICODE_BAD_UTF8, 
 	"invalid UTF-8 gives incorrect result");
+    valid = valid_utf8 (invalid_utf8, strlen ((char *) invalid_utf8));
+    OK (valid == INVALID_UTF8, "Invalid UTF-8 fails valid_utf8");
 }
 
 static void
@@ -825,6 +836,14 @@ test_unicode_count_chars (int * count)
     OK (cc == 7, "get seven characters for utf8");
 }
 
+static void
+test_valid_utf8 (int * count)
+{
+    int valid;
+    valid = valid_utf8 (utf8, strlen ((const char *) utf8));
+    OK (valid == VALID_UTF8, "Valid UTF-8 passes valid_utf8");
+}
+
 int main ()
 {
     /* Test counter for TAP. */
@@ -836,6 +855,7 @@ int main ()
     test_unicode_count_chars (& count);
     test_surrogate_pairs (& count);
     test_utf8_bytes (& count);
+    test_valid_utf8 (& count);
     printf ("1..%d\n", count);
 }
 
