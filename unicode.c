@@ -13,8 +13,50 @@
 #include "unicode.h"
 
 #ifdef HEADER
-/* This length includes one trailing nul byte. */
+
+/*  _     _           _ _       
+   | |   (_)_ __ ___ (_) |_ ___ 
+   | |   | | '_ ` _ \| | __/ __|
+   | |___| | | | | | | | |_\__ \
+   |_____|_|_| |_| |_|_|\__|___/ */
+                             
+
+
+/* The maximum number of bytes we need to contain any Unicode code
+   point as UTF-8 as a C string. This length includes one trailing nul
+   byte. */
+
 #define UTF8_MAX_LENGTH 5
+
+/* The maximum possible value of a Unicode code point. See
+   http://www.cl.cam.ac.uk/~mgk25/unicode.html#ucs. */
+
+#define UNICODE_MAXIMUM 0x10ffff
+
+/* The maximum possible value which will fit into four bytes of
+   UTF-8. This is larger than UNICODE_MAXIMUM. */
+
+#define UNICODE_UTF8_4 0x1fffff
+
+/*  ____      _                                 _                 
+   |  _ \ ___| |_ _   _ _ __ _ __   __   ____ _| |_   _  ___  ___ 
+   | |_) / _ \ __| | | | '__| '_ \  \ \ / / _` | | | | |/ _ \/ __|
+   |  _ <  __/ |_| |_| | |  | | | |  \ V / (_| | | |_| |  __/\__ \
+   |_| \_\___|\__|\__,_|_|  |_| |_|   \_/ \__,_|_|\__,_|\___||___/ */
+                                                               
+
+/* All of the functions in this library return an int. Negative values
+   are used to indicate errors. */
+
+/* For routines which don't use the return value to communicate data
+   back to the caller, the following return value indicates a
+   successful completion. */
+
+#define UNICODE_OK 0
+
+/* Input is not valid UTF-8, specifically the first byte wasn't
+   valid. */
+
 #define UNICODE_BAD_INPUT -1
 
 /* An illegal surrogate pair code was attempted to turn into UTF-8. */
@@ -26,16 +68,20 @@
 
 #define UNICODE_NOT_SURROGATE_PAIR -3
 
-/* Input which was supposed to be UTF-8 encoded was not. */
+/* Input which was supposed to be UTF-8 encoded was not, specifically
+   the first byte was valid, but the second or third or fourth bytes
+   were not valid. If the first byte is not valid, UNICODE_BAD_INPUT
+   is returned instead of this. */
 
 #define UNICODE_BAD_UTF8 -4
 
-/* A string of UTF-8 bytes turned out to contain a zero as its first
-   byte. */
+/* A string which was supposed to contain UTF-8 bytes turned out to
+   contain a zero byte as its first byte. */
 
 #define UNICODE_EMPTY_INPUT -5
 
-/* Some UTF-8 bytes were not in the shortest possible form. */
+/* Some UTF-8 bytes were not in the shortest possible form. See
+   http://www.cl.cam.ac.uk/~mgk25/unicode.html#utf-8. */
 
 #define UNICODE_NON_SHORTEST -6
 
@@ -49,25 +95,11 @@
 
 #define UNICODE_NOT_CHARACTER -8
 
-/* The maximum possible value of a Unicode code point. */
-
-#define UNICODE_MAXIMUM 0x10ffff
-
-/* The maximum possible value which will fit into four bytes of
-   UTF-8. This is larger than UNICODE_MAXIMUM. */
-
-#define UNICODE_UTF8_4 0x1fffff
-
-/* For routines which don't use the return value to communicate back
-   to the caller, this return value indicates a successful
-   completion. */
-
-#define UNICODE_OK 0
 #endif /* def HEADER */
 
 /* The return value is how many bytes of UTF-8 character point "c"
    will become. If "c" is not a valid UTF-8 byte, the value
-   UNICODE_BAD_UTF8 is returned. */
+   UNICODE_BAD_INPUT is returned. */
 
 int utf8_bytes (unsigned char c)
 {
@@ -83,7 +115,7 @@ int utf8_bytes (unsigned char c)
     if ((c & 0xC0) == 0xC0) {
 	return 2;
     }
-    return UNICODE_BAD_UTF8;
+    return UNICODE_BAD_INPUT;
 }
 
 /* Try to convert "input" from UTF-8 to UCS-2, and return a value even
@@ -630,16 +662,16 @@ void print_bytes (const unsigned char * bytes)
     fprintf (stderr, "\n");
 }
 
-#define OK(test, counter, message, ...) {	\
-	counter++;				\
-	if (test) {				\
-	    printf ("ok %d - ", counter);	\
-	}					\
-	else {					\
-	    printf ("not ok %d - ", counter);	\
-	}					\
-	printf (message, ## __VA_ARGS__);	\
-	printf (".\n");				\
+#define OK(test, message, ...) {			\
+	(*count)++;					\
+	if (test) {					\
+	    printf ("ok %d - ", (*count));		\
+	}						\
+	else {						\
+	    printf ("not ok %d - ", (*count));		\
+	}						\
+	printf (message, ## __VA_ARGS__);		\
+	printf (".\n");					\
     }
 
 
@@ -667,9 +699,9 @@ void test_ucs2_to_utf8 (const unsigned char * input, int * count)
 	    exit (EXIT_FAILURE);
 	}
         bytes = ucs2_to_utf8 (unicode, offset);
-	OK (bytes > 0, (*count), "no bad conversion");
+	OK (bytes > 0,  "no bad conversion");
 	OK (strncmp ((const char *) offset,
-		     (const char *) start, bytes) == 0, (*count),
+		     (const char *) start, bytes) == 0, 
 	    "round trip OK for %X (%d bytes)", unicode, bytes);
         start = end;
         offset += bytes;
@@ -679,7 +711,7 @@ void test_ucs2_to_utf8 (const unsigned char * input, int * count)
     }
     * offset = '\0';
     OK (strcmp ((const char *) buffer, (const char *) input) == 0,
-	(*count),
+	
 	"input %s resulted in identical output %s",
 	input, buffer);
 }
@@ -687,12 +719,13 @@ void test_ucs2_to_utf8 (const unsigned char * input, int * count)
 static void
 test_invalid_utf8 (int * count)
 {
-    unsigned char invalid_utf8[8];
+    unsigned char invalid_utf8[UTF8_MAX_LENGTH];
     int unicode;
     const unsigned char * end;
-    snprintf ((char *) invalid_utf8, 7, "%c%c%c", 0xe8, 0xe4, 0xe5);
+    snprintf ((char *) invalid_utf8, UTF8_MAX_LENGTH - 1,
+	      "%c%c%c", 0xe8, 0xe4, 0xe5);
     unicode = utf8_to_ucs2 (invalid_utf8, & end);
-    OK (unicode == UNICODE_BAD_UTF8, (*count),
+    OK (unicode == UNICODE_BAD_UTF8, 
 	"invalid UTF-8 gives incorrect result");
 }
 
@@ -719,32 +752,77 @@ test_surrogate_pairs (int * count)
 
     status = unicode_to_surrogates (nogood, & hi, & lo);
 
-    OK (status == UNICODE_NOT_SURROGATE_PAIR, (*count),
+    OK (status == UNICODE_NOT_SURROGATE_PAIR, 
 	"low value to surrogate pair breaker returns error");
 
     status = unicode_to_surrogates (wikipedia_1, & hi, & lo);
-    OK (status == UNICODE_OK, (*count), "Ok with %X", wikipedia_1);
-    OK (hi == 0xD801, (*count), "Got expected %X == 0xD801", hi);
-    OK (lo == 0xDC37, (*count), "Got expected %X == 0xDC37", lo);
+    OK (status == UNICODE_OK,  "Ok with %X", wikipedia_1);
+    OK (hi == 0xD801,  "Got expected %X == 0xD801", hi);
+    OK (lo == 0xDC37,  "Got expected %X == 0xDC37", lo);
     rt = surrogates_to_unicode (hi, lo);
-    OK (rt == wikipedia_1, (*count), "Round trip %X == initial %X",
+    OK (rt == wikipedia_1,  "Round trip %X == initial %X",
 	rt, wikipedia_1);
 
     status = unicode_to_surrogates (wikipedia_2, & hi, & lo);
-    OK (status == UNICODE_OK, (*count), "Ok with %X", wikipedia_1);
-    OK (hi == 0xD852, (*count), "Got expected %X == 0xD852", hi);
-    OK (lo == 0xDF62, (*count), "Got expected %X == 0xDF62", lo);
+    OK (status == UNICODE_OK,  "Ok with %X", wikipedia_1);
+    OK (hi == 0xD852,  "Got expected %X == 0xD852", hi);
+    OK (lo == 0xDF62,  "Got expected %X == 0xDF62", lo);
     rt = surrogates_to_unicode (hi, lo);
-    OK (rt == wikipedia_2, (*count), "Round trip %X == initial %X",
+    OK (rt == wikipedia_2,  "Round trip %X == initial %X",
 	rt, wikipedia_2);
 
     status = unicode_to_surrogates (json_spec, & hi, & lo);
-    OK (status == UNICODE_OK, (*count), "Ok with %X", json_spec);
-    OK (hi == 0xD834, (*count), "Got expected %X == 0xD834", hi);
-    OK (lo == 0xDd1e, (*count), "Got expected %X == 0xDD1e", lo);
+    OK (status == UNICODE_OK,  "Ok with %X", json_spec);
+    OK (hi == 0xD834,  "Got expected %X == 0xD834", hi);
+    OK (lo == 0xDd1e,  "Got expected %X == 0xDD1e", lo);
     rt = surrogates_to_unicode (hi, lo);
-    OK (rt == json_spec, (*count), "Round trip %X == initial %X",
+    OK (rt == json_spec,  "Round trip %X == initial %X",
 	rt, json_spec);
+}
+
+static void test_utf8_bytes (int * count)
+{
+    struct tub {
+	int first;
+	int expect;
+    } tests[] = {
+	{'a',1},
+	{0xb0,UNICODE_BAD_INPUT},
+    };
+    int n_tests = sizeof (tests) / sizeof (struct tub);
+    int i;
+    for (i = 0; i < n_tests; i++) {
+	/* Expected bytes. */
+	int xbytes;
+	int firstbyte;
+	firstbyte = tests[i].first;
+	xbytes = utf8_bytes (firstbyte);
+	OK (xbytes == tests[i].expect, "Got %d (%d) with input %d",
+	    xbytes, tests[i].expect, firstbyte);
+    }
+}
+
+static const unsigned char * utf8 = (unsigned char *) "漢数字ÔÕÖＸ";
+
+static void
+test_utf8_to_ucs2 (int * count)
+{
+    const unsigned char * start = utf8;
+    while (*start) {
+        int unicode;
+        const unsigned char * end;
+        unicode = utf8_to_ucs2 (start, & end);
+	OK (unicode > 0, "no bad value at %s", start);
+        printf ("# %s is %04X, length is %d\n", start, unicode, end - start);
+        start = end;
+    }
+}
+
+static void
+test_unicode_count_chars (int * count)
+{
+    int cc = unicode_count_chars (utf8);
+    OK (cc == 7, "get seven characters for utf8");
 }
 
 int main ()
@@ -752,21 +830,12 @@ int main ()
     /* Test counter for TAP. */
     int count;
     count = 0;
-    const unsigned char * utf8 = (unsigned char *) "漢数字ÔÕÖＸ";
-    const unsigned char * start = utf8;
-    while (*start) {
-        int unicode;
-        const unsigned char * end;
-        unicode = utf8_to_ucs2 (start, & end);
-	OK (unicode > 0, count, "no bad value at %s", start);
-        printf ("# %s is %04X, length is %d\n", start, unicode, end - start);
-        start = end;
-    }
+    test_utf8_to_ucs2 (& count);
     test_ucs2_to_utf8 (utf8, & count);
-    int cc = unicode_count_chars (utf8);
-    OK (cc == 7, count, "get seven characters for utf8");
     test_invalid_utf8 (& count);
+    test_unicode_count_chars (& count);
     test_surrogate_pairs (& count);
+    test_utf8_bytes (& count);
     printf ("1..%d\n", count);
 }
 
