@@ -11,8 +11,6 @@
   https://github.com/benkasminbullock/unicode-c
 */
 
-#include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
 #include "unicode.h"
@@ -691,6 +689,9 @@ valid_utf8 (const unsigned char * input, int input_length)
    "make test" to compile the testing version. */
 
 #ifdef TEST
+
+#include <stdio.h>
+#include <stdlib.h>
 
 void print_bytes (const unsigned char * bytes)
 {
