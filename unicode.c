@@ -159,19 +159,19 @@ utf8_no_checks (const unsigned char * input, const unsigned char ** end_ptr)
     case 2:
         * end_ptr = input + 2;
         return
-            (c & 0x1F)<<6  |
+            (c & 0x1F) << 6  |
             (input[1] & 0x3F);
 
     case 3:
         * end_ptr = input + 3;
         return
-            (c & 0x0F)<<12 |
-            (input[1] & 0x3F)<<6  |
+            (c & 0x0F) << 12 |
+            (input[1] & 0x3F) << 6  |
             (input[2] & 0x3F);
 
     case 4:
         * end_ptr = input + 4;
-	return FOUR(input);
+	return FOUR (input);
 
     case 0:
 	/* fall through */
@@ -211,7 +211,7 @@ int utf8_to_ucs2 (const unsigned char * input, const unsigned char ** end_ptr)
 	}
         * end_ptr = input + 2;
         return
-            (c & 0x1F)<<6  |
+            (c & 0x1F) << 6  |
             (input[1] & 0x3F);
     }
     if (l == 3) {
@@ -228,8 +228,8 @@ int utf8_to_ucs2 (const unsigned char * input, const unsigned char ** end_ptr)
 	}
         * end_ptr = input + 3;
         return
-            (c & 0x0F)<<12 |
-            (input[1] & 0x3F)<<6  |
+            (c & 0x0F) << 12 |
+            (input[1] & 0x3F) << 6  |
             (input[2] & 0x3F);
     }
     if (l == 4) {
@@ -256,7 +256,7 @@ int utf8_to_ucs2 (const unsigned char * input, const unsigned char ** end_ptr)
 	    return UNICODE_NON_SHORTEST;
 	}
 	/* Calculate the code point. */
-	v = FOUR(input);
+	v = FOUR (input);
 	/* Greater than U+10FFFF */
 	if (v > UNICODE_MAXIMUM) {
 	    return UNICODE_TOO_BIG;
@@ -348,7 +348,7 @@ unicode_to_surrogates (unsigned unicode, int * hi_ptr, int * lo_ptr)
 	return UNICODE_NOT_SURROGATE_PAIR;
     }
     unicode -= halfBase;
-    hi |= ((unicode >>halfShift) & LOWTENBITS);
+    hi |= ((unicode >> halfShift) & LOWTENBITS);
     lo |= ((unicode) & LOWTENBITS);
     * hi_ptr = hi;
     * lo_ptr = lo;
@@ -537,7 +537,7 @@ int unicode_count_chars (const unsigned char * utf8)
 
 #define UNICODEFAILUTF8(want) return INVALID_UTF8
 
-#define UNICODENEXTBYTE c=input[i]
+#define UNICODENEXTBYTE c = input[i]
 
 /* Given "input" and "input_length", validate "input" byte by byte up
    to "input_length". The return value may be VALID_UTF8 or
