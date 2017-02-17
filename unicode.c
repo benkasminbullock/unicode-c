@@ -234,7 +234,9 @@ int utf8_to_ucs2 (const unsigned char * input, const unsigned char ** end_ptr)
     }
     if (l == 4) {
 	/* Four byte case. */
-	unsigned char d, e, f;
+	unsigned char d;
+	unsigned char e;
+	unsigned char f;
 	uint32_t v;
 	d = input[1];
 	e = input[2];
@@ -747,7 +749,7 @@ void test_ucs2_to_utf8 (const unsigned char * input, int * count)
         offset += bytes;
 #if 0
         printf ("%X %d\n", unicode, bytes);
-#endif
+#endif /* 0 */
     }
     * offset = '\0';
     OK (strcmp ((const char *) buffer, (const char *) input) == 0,
