@@ -681,6 +681,30 @@ valid_utf8 (const unsigned char * input, int input_length)
     }
 }
 
+/* Make "* ptr" point to the start of the first UTF-8 byte. */
+
+int
+trim_to_utf8_start (unsigned char ** ptr)
+{
+    unsigned char * p = *ptr;
+    unsigned char c;
+    int i;
+    c = *p & 0xC0;
+    if (c == 0xC0 || c == 0x00) {
+	return UNICODE_OK;
+    }
+    for (i = 0; i < UTF8_MAX_LENGTH - 1; i++) {
+	c = p[i];
+	if ((c & 0x80) != 0x80 || (c & 0x40) != 0) {
+	    * ptr = p + i;
+	    return UNICODE_OK;
+	}
+    }
+    return UNICODE_BAD_UTF8;
+}
+
+
+
 /*  _____         _       
    |_   _|__  ___| |_ ___ 
      | |/ _ \/ __| __/ __|
@@ -831,10 +855,10 @@ static void test_utf8_bytes (int * count)
 	int first;
 	int expect;
     } tests[] = {
-	{'a',1},
-	{0xb0,UNICODE_BAD_INPUT},
-	{0xc2,2},
-	{0xff,UNICODE_BAD_INPUT},
+	{'a', 1},
+	{0xb0, UNICODE_BAD_INPUT},
+	{0xc2, 2},
+	{0xff, UNICODE_BAD_INPUT},
     };
     int n_tests = sizeof (tests) / sizeof (struct tub);
     int i;
@@ -883,6 +907,24 @@ test_valid_utf8 (int * count)
     OK (valid == VALID_UTF8, "Valid UTF-8 passes valid_utf8");
 }
 
+static void
+test_trim_to_utf8_start (int * count)
+{
+int status;
+unsigned char bad[] = {0x99,0x99,0x99,0x99,0x99,0x99};
+unsigned char * p;
+unsigned char good[] = "化苦";
+p = bad;
+status = trim_to_utf8_start (& p);
+OK (status == UNICODE_BAD_UTF8, "Non-UTF-8 causes error");
+OK (p == bad, "Did not change pointer");
+p = good + 1;
+status = trim_to_utf8_start (& p);
+OK (status == UNICODE_OK, "Got OK result");
+OK (p != good + 1, "Moved p");
+OK (p == good + 3, "Moved p to the right position");
+}
+
 int main ()
 {
     /* Test counter for TAP. */
@@ -895,6 +937,7 @@ int main ()
     test_surrogate_pairs (& count);
     test_utf8_bytes (& count);
     test_valid_utf8 (& count);
+    test_trim_to_utf8_start (& count);
     printf ("1..%d\n", count);
 }
 
