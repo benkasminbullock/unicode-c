@@ -910,19 +910,19 @@ test_valid_utf8 (int * count)
 static void
 test_trim_to_utf8_start (int * count)
 {
-int status;
-unsigned char bad[] = {0x99,0x99,0x99,0x99,0x99,0x99};
-unsigned char * p;
-unsigned char good[] = "化苦";
-p = bad;
-status = trim_to_utf8_start (& p);
-OK (status == UNICODE_BAD_UTF8, "Non-UTF-8 causes error");
-OK (p == bad, "Did not change pointer");
-p = good + 1;
-status = trim_to_utf8_start (& p);
-OK (status == UNICODE_OK, "Got OK result");
-OK (p != good + 1, "Moved p");
-OK (p == good + 3, "Moved p to the right position");
+    int status;
+    unsigned char bad[] = {0x99, 0x99, 0x99, 0x99, 0x99, 0x99};
+    unsigned char * p;
+    unsigned char good[] = "化苦";
+    p = bad;
+    status = trim_to_utf8_start (& p);
+    OK (status == UNICODE_BAD_UTF8, "Non-UTF-8 causes error");
+    OK (p == bad, "Did not change pointer");
+    p = good + 1;
+    status = trim_to_utf8_start (& p);
+    OK (status == UNICODE_OK, "Got OK result");
+    OK (p != good + 1, "Moved p");
+    OK (p == good + 3, "Moved p to the right position");
 }
 
 int main ()
