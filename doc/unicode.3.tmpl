@@ -10,7 +10,7 @@
 [% description %]
 .Sh FUNCTIONS
 [%- FOR function IN functions %]
-.Pp
+.Ss [% function.name %]
 .Ft int
 .Fo [% function.name %]
 [%- FOR arg IN function.args %]
@@ -20,4 +20,15 @@
 .Pp
 [% function.desc %]
 [%- END %]
+.Sh RETURN VALUE MACROS
+[%- FOR macro IN macros %]
+.Ss [% macro.name %]
+[% macro.name %] ([% macro.value %])
+.Pp
+[% macro.meaning %]
+[%- END %]
+.Sh SEE ALSO
+https://www.lemoda.net/tools/uniconvert/index.html
+.Pp
+https://github.com/benkasminbullock/unicode-c
 

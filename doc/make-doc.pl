@@ -7,6 +7,8 @@ use FindBin '$Bin';
 use C::Tokenize ':all';
 use JSON::Create 'create_json';
 use Deploy 'write_ro_file';
+use Text::LineNumber;
+use List::UtilsBy 'sort_by';
 my $in = "$Bin/../unicode.c";
 my $text = whole ($in);
 
@@ -24,6 +26,7 @@ while ($text =~ /($trad_comment_re)?\s*^\#
 		\s+
 		(-?[0-9A-Fa-fx]+)
 		\s*$/xsmg) {
+    my $meaning = $1;
     my $macro = $2;
     my $value = $3;
     if ($1) {
@@ -36,7 +39,8 @@ while ($text =~ /($trad_comment_re)?\s*^\#
 my $macro_re = hash2re (\%macros);
 #exit;
 my @functions;
-while ($text =~ /($trad_comment_re)
+my $tln = Text::LineNumber->new($text);
+while ($text =~ /($trad_comment_re)?
 		 \s+
 		 ^int
 		 \s*
@@ -45,8 +49,14 @@ while ($text =~ /($trad_comment_re)
 		 (\([^)]+\))
 		/gmsx) {
     my $function = $2;
-    my $comment = decomment ($1);
+    my $comment = $1;
     my $args = $3;
+    if (! $comment) {
+	my $line = $tln->off2lnr (pos ($text));
+	warn "$in:$line: No comment for $function.\n";
+	$comment = '';
+    }
+    $comment = decomment ($comment);
     $comment =~ s/\n\s+/ /g;
 #    print "$macro_re\n";
     $comment =~ s/($macro_re)/$1 ($macros{$1})/g;
@@ -58,10 +68,27 @@ while ($text =~ /($trad_comment_re)
 	desc => $comment,
     };
 }
+@functions = sort_by {$_->{name}} @functions;
+my @macros;
+for my $m (sort keys %macros) {
+    if ($m =~ /_SUR_|LOW/) {
+	next;
+    }
+    my $meaning = $m2c{$m};
+    if (! $meaning) {
+	$meaning = 'Undocumented.';
+    }
+    push @macros, {
+	name => $m,
+	value => $macros{$m},
+	meaning => $meaning,
+    };
+}
 my $outfile = "$Bin/doc.json";
 my %doc = (
     functions => \@functions,
     description => decomment ($maincomment),
+    macros => \@macros,
     date => scalar (gmtime ((stat ($in))[9])),
 );
 my $json = create_json (\%doc);

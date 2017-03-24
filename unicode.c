@@ -52,8 +52,8 @@
    are used to indicate errors. */
 
 /* For routines which don't use the return value to communicate data
-   back to the caller, the following return value indicates a
-   successful completion. */
+   back to the caller, this return value indicates a successful
+   completion. */
 
 #define UNICODE_OK 0
 
@@ -89,13 +89,15 @@
 
 #define UNICODE_NON_SHORTEST -6
 
-/* There was an attempt to convert a code point which was greater than
-   UNICODE_UTF8_4 into UTF-8 bytes. */
+/* This return value indicates that there was an attempt to convert a
+   code point which was greater than UNICODE_UTF8_4 into UTF-8
+   bytes. */
 
 #define UNICODE_TOO_BIG -7
 
-/* The Unicode code-point ended with either 0xFFFF or 0xFFFE, meaning
-   it cannot be used as a character code point. */
+/* This return value indicates that the Unicode code-point ended with
+   either 0xFFFF or 0xFFFE, meaning it cannot be used as a character
+   code point. */
 
 #define UNICODE_NOT_CHARACTER -8
 
@@ -324,9 +326,12 @@ int ucs2_to_utf8 (int ucs2, unsigned char * utf8)
 #define UNI_SUR_HIGH_END    0xDBFF
 #define UNI_SUR_LOW_START   0xDC00
 #define UNI_SUR_LOW_END     0xDFFF
+static const int halfShift  = 10; /* used for shifting by 10 bits */
+static const uint32_t halfBase = 0x0010000UL;
+#define LOWTENBITS 0x3FF
 
-/* Convert a unicode code point "unicode" into its high and low
-   surrogate pair equivalents, in "*hi_ptr" and "*lo_ptr".
+/* This converts the Unicode code point in "unicode" into a surrogate
+   pair, and returns the two parts in "* hi_ptr" and "* lo_ptr". 
 
    Return value:
 
@@ -334,10 +339,6 @@ int ucs2_to_utf8 (int ucs2, unsigned char * utf8)
    UNICODE_NOT_SURROGATE_PAIR is returned, and the values of "*hi_ptr"
    and "*lo_ptr" are undefined. If the conversion is successful,
    UNICODE_OK is returned. */
-
-static const int halfShift  = 10; /* used for shifting by 10 bits */
-static const uint32_t halfBase = 0x0010000UL;
-#define LOWTENBITS 0x3FF
 
 int
 unicode_to_surrogates (unsigned unicode, int * hi_ptr, int * lo_ptr)
@@ -361,9 +362,9 @@ unicode_to_surrogates (unsigned unicode, int * hi_ptr, int * lo_ptr)
    value. The return value is the Unicode value. If the return value
    is negative, an error has occurred. If "hi" and "lo" do not form a
    surrogate pair, the error value UNICODE_NOT_SURROGATE_PAIR is
-   returned. */
-
-/* https://android.googlesource.com/platform/external/id3lib/+/master/unicode.org/ConvertUTF.c */
+   returned. 
+ 
+   https://android.googlesource.com/platform/external/id3lib/+/master/unicode.org/ConvertUTF.c */
 
 int
 surrogates_to_unicode (int hi, int lo)
@@ -380,7 +381,10 @@ surrogates_to_unicode (int hi, int lo)
     return UNICODE_NOT_SURROGATE_PAIR;
 }
 
-/* Convert surrogate pairs to UTF-8. */
+/* Convert the surrogate pair in "hi" and "lo" to UTF-8 in
+   "utf8". This calls surrogates_to_unicode and ucs2_to_utf8 thus it
+   can return the error values, and has the same restriction as
+   ucs2_to_utf8. */
 
 int surrogate_to_utf8 (int hi, int lo, unsigned char * utf8)
 {
@@ -471,7 +475,13 @@ int unicode_count_chars (const unsigned char * utf8)
 }
 
 #ifdef HEADER
+
+/* The UTF-8 is valid. */
+
 #define VALID_UTF8 1
+
+/* The UTF-8 is not valid. */
+
 #define INVALID_UTF8 0
 #endif /* def HEADER */
 
@@ -681,7 +691,19 @@ valid_utf8 (const unsigned char * input, int input_length)
     }
 }
 
-/* Make "* ptr" point to the start of the first UTF-8 byte. */
+/* Make "* ptr" point to the start of the first UTF-8 character after
+   its initial value. This assumes that there are at least four bytes
+   which can be read, and that * ptr points to valid UTF-8. If ** ptr
+   does not have its top bit set, this does not change the value of *
+   ptr and it returns UNICODE_OK. If "** ptr" has its top bit set, it
+   does not change the value of "* ptr" and it returns UNICODE_OK. If
+   "**ptr" is the second, third, or fourth byte of a multibyte
+   sequence, it is incremented until it is no longer so, or too many
+   bytes have passed. If too many bytes have passed, UNICODE_BAD_UTF8
+   is returned and *ptr is left unchanged. If a valid UTF-8 first byte
+   was found UNICODE_OK is returned, and *ptr is set to the address of
+   the valid byte. Nul bytes (bytes containing zero) are considered
+   valid. */
 
 int
 trim_to_utf8_start (unsigned char ** ptr)
@@ -914,6 +936,7 @@ test_trim_to_utf8_start (int * count)
     unsigned char bad[] = {0x99, 0x99, 0x99, 0x99, 0x99, 0x99};
     unsigned char * p;
     unsigned char good[] = "化苦";
+    unsigned char good2[] = "化abc";
     p = bad;
     status = trim_to_utf8_start (& p);
     OK (status == UNICODE_BAD_UTF8, "Non-UTF-8 causes error");
@@ -923,6 +946,11 @@ test_trim_to_utf8_start (int * count)
     OK (status == UNICODE_OK, "Got OK result");
     OK (p != good + 1, "Moved p");
     OK (p == good + 3, "Moved p to the right position");
+    p = good2 + 1;
+    status = trim_to_utf8_start (& p);
+    OK (status == UNICODE_OK, "Got OK result");
+    OK (p != good2 + 1, "Moved p");
+    OK (p == good2 + 3, "Moved p to the right position");
 }
 
 int main ()
