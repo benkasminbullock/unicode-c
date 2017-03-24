@@ -1,0 +1,23 @@
+.Dd [% date %]
+.Dt UNICODE 3
+.Sh NAME
+[%- FOR function IN functions %]
+.Nm [% function.name %]
+[%- END %]
+.Sh SYNOPSIS
+.In unicode.h
+.Sh DESCRIPTION
+[% description %]
+.Sh FUNCTIONS
+[%- FOR function IN functions %]
+.Pp
+.Ft int
+.Fo [% function.name %]
+[%- FOR arg IN function.args %]
+.Fa "[% arg %]"
+[%- END %]
+.Fc
+.Pp
+[% function.desc %]
+[%- END %]
+

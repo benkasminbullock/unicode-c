@@ -1,7 +1,10 @@
 OBJS=unicode.o unicode-character-class.o
 CFLAGS=-g -Wall
 
-all:	libunicode.a unicode.h
+all:	libunicode.a unicode.h docinstall
+
+docinstall:	unicode.c
+	cd doc;make;cp -f unicode.3 /home/ben/software/install/man/man3/
 
 libunicode.a:	$(OBJS)
 	ar rcs $@ $(OBJS)
