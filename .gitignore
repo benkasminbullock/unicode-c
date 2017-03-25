@@ -4,3 +4,5 @@ unicode-character-class-test
 # Made by cfunctions
 unicode-character-class.h
 unicode.h
+c-tap-test.h
+UTF-8-test.txt

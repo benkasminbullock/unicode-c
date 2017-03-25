@@ -57,7 +57,7 @@ while ($text =~ /($trad_comment_re)?
 	$comment = '';
     }
     $comment = decomment ($comment);
-    $comment =~ s/\n\s+/ /g;
+#    $comment =~ s/\n\s+/ /g;
 #    print "$macro_re\n";
     $comment =~ s/($macro_re)/$1 ($macros{$1})/g;
     $args =~ s/^\s*\(|\)\s*$//g;

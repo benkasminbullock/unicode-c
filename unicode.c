@@ -17,11 +17,11 @@
 
 #ifdef HEADER
 
-/*  _     _           _ _       
-   | |   (_)_ __ ___ (_) |_ ___ 
-   | |   | | '_ ` _ \| | __/ __|
-   | |___| | | | | | | | |_\__ \
-   |_____|_|_| |_| |_|_|\__|___/ */
+/*   _     _           _ _       
+    | |   (_)_ __ ___ (_) |_ ___ 
+    | |   | | '_ ` _ \| | __/ __|
+    | |___| | | | | | | | |_\__ \
+    |_____|_|_| |_| |_|_|\__|___/ */
                              
 
 
@@ -41,11 +41,11 @@
 
 #define UNICODE_UTF8_4 0x1fffff
 
-/*  ____      _                                 _                 
-   |  _ \ ___| |_ _   _ _ __ _ __   __   ____ _| |_   _  ___  ___ 
-   | |_) / _ \ __| | | | '__| '_ \  \ \ / / _` | | | | |/ _ \/ __|
-   |  _ <  __/ |_| |_| | |  | | | |  \ V / (_| | | |_| |  __/\__ \
-   |_| \_\___|\__|\__,_|_|  |_| |_|   \_/ \__,_|_|\__,_|\___||___/ */
+/*   ____      _                                 _                 
+    |  _ \ ___| |_ _   _ _ __ _ __   __   ____ _| |_   _  ___  ___ 
+    | |_) / _ \ __| | | | '__| '_ \  \ \ / / _` | | | | |/ _ \/ __|
+    |  _ <  __/ |_| |_| | |  | | | |  \ V / (_| | | |_| |  __/\__ \
+    |_| \_\___|\__|\__,_|_|  |_| |_|   \_/ \__,_|_|\__,_|\___||___/ */
                                                                
 
 /* All of the functions in this library return an int. Negative values
@@ -80,7 +80,7 @@
 #define UNICODE_BAD_UTF8 -4
 
 /* A string which was supposed to contain UTF-8 bytes turned out to
-   contain a zero byte as its first byte. */
+   contain a zero byte. */
 
 #define UNICODE_EMPTY_INPUT -5
 
@@ -124,8 +124,10 @@ static const uint8_t utf8_sequence_len[0x100] = {
     4,4,4,4,4,0,0,0,0,0,0,0,0,0,0,0, /* 0xF0-0xFF */
 };
 
-/* The return value is how many bytes of UTF-8 character point "c"
-   will become. If "c" is not a valid UTF-8 byte, the value
+/* The return value is how many bytes of UTF-8 a sequence starting
+   with byte "c" will become, either 1 (c = 0000xxxx), 2 (c =
+   110xxxxx), 3 (c = 1110xxxx), or 4 (c = 111100xx or c =
+   11110100). If "c" is not a valid UTF-8 first byte, the value
    UNICODE_BAD_INPUT is returned. */
 
 int utf8_bytes (unsigned char c)
@@ -187,7 +189,14 @@ utf8_no_checks (const unsigned char * input, const unsigned char ** end_ptr)
    successful, and a negative number if not successful. "end_ptr" is
    set to the next character after the read character on
    success. "end_ptr" is set to the start of input on
-   failure. "end_ptr" may not be null. */
+   failure. "end_ptr" may not be null. If the UTF-8 is not in the
+   shortest possible form, UNICODE_NON_SHORTEST error is returned. If
+   there is a zero byte in "input", UNICODE_EMPTY_INPUT is
+   returned. If the second or later bytes are not valid UTF-8,
+   UNICODE_BAD_UTF8 is returned. If the value extrapolated from
+   "input" is greater than UNICODE_MAXIMUM, UNICODE_TOO_BIG is
+   returned. If the value extrapolated from "input" ends in 0xFFFF or
+   0xFFFE, UNICODE_NOT_CHARACTER is returned. */
 
 int utf8_to_ucs2 (const unsigned char * input, const unsigned char ** end_ptr)
 {
@@ -280,7 +289,14 @@ int utf8_to_ucs2 (const unsigned char * input, const unsigned char ** end_ptr)
    Output: UTF-8 characters in buffer "utf8". 
 
    Return value: the number of bytes written into "utf8", or a
-   negative number if there was an error.
+   negative number if there was an error. If the value of "ucs2" is
+   invalid because of being in the surrogate pair range from 0xD800 to
+   0xDFFF, the return value is UNICODE_SURROGATE_PAIR, else if the
+   value is too big to fit into four bytes of UTF-8, UNICODE_UTF8_4,
+   the return value is UNICODE_TOO_BIG. However, it does not insist on
+   ucs2 being less than UNICODE_MAXIMUM, so the user needs to check
+   that "ucs2" is a valid code point. It also does not check for
+   invalid characters, such as 0xFFFF.
 
    This adds a zero byte to the end of the string. It assumes that the
    buffer "utf8" has at least UNICODE_MAX_LENGTH (5) bytes of space to
@@ -328,6 +344,7 @@ int ucs2_to_utf8 (int ucs2, unsigned char * utf8)
 #define UNI_SUR_LOW_END     0xDFFF
 static const int halfShift  = 10; /* used for shifting by 10 bits */
 static const uint32_t halfBase = 0x0010000UL;
+/* 0b1111111111 */
 #define LOWTENBITS 0x3FF
 
 /* This converts the Unicode code point in "unicode" into a surrogate
@@ -374,7 +391,7 @@ surrogates_to_unicode (int hi, int lo)
 	/* If it's a low surrogate, convert to UTF32. */
 	if (lo >= UNI_SUR_LOW_START && lo <= UNI_SUR_LOW_END) {
 	    u = ((hi - UNI_SUR_HIGH_START) << halfShift)
-	      + (lo - UNI_SUR_LOW_START) + halfBase;
+		+ (lo - UNI_SUR_LOW_START) + halfBase;
 	    return u;
 	}
     }
@@ -382,9 +399,9 @@ surrogates_to_unicode (int hi, int lo)
 }
 
 /* Convert the surrogate pair in "hi" and "lo" to UTF-8 in
-   "utf8". This calls surrogates_to_unicode and ucs2_to_utf8 thus it
-   can return the error values, and has the same restriction as
-   ucs2_to_utf8. */
+   "utf8". This calls surrogates_to_unicode and ucs2_to_utf8, thus it
+   can return the same errors as them, and has the same restriction on
+   "utf8" as ucs2_to_utf8. */
 
 int surrogate_to_utf8 (int hi, int lo, unsigned char * utf8)
 {
@@ -399,8 +416,8 @@ int surrogate_to_utf8 (int hi, int lo, unsigned char * utf8)
 /* Given a nul-terminated string "utf8" and a number of Unicode
    characters "n_chars", return the number of bytes into "utf8" at
    which the end of the characters occurs. A negative value indicates
-   some kind of error. If the return value is UNICODE_EMPTY_INPUT,
-   "utf8" contained a zero byte. This may also return any of the
+   some kind of error. If "utf8" contains a zero byte, the return
+   value is UNICODE_EMPTY_INPUT. This may also return any of the error
    values of "utf8_to_ucs2". */
 
 int
@@ -422,7 +439,9 @@ unicode_chars_to_bytes (const unsigned char * utf8, int n_chars)
 }
 
 /* Like unicode_count_chars, but without error checks or validation of
-   the input. */
+   the input. This only checks the first byte of each UTF-8
+   sequence. It may return UNICODE_BAD_INPUT if the first byte is
+   invalid. */
 
 int unicode_count_chars_fast (const unsigned char * utf8)
 {
@@ -433,8 +452,10 @@ int unicode_count_chars_fast (const unsigned char * utf8)
     while (*p) {
 	int len;
 	len = utf8_sequence_len[*p];
-	if (len < 0) {
-	    return len;
+	if (len == 0) {
+	    /* The first byte of a UTF-8 sequence is bad, so return
+	       this, not BAD_UTF8. */
+	    return UNICODE_BAD_INPUT;
 	}
 	p += len;
 	chars++;
@@ -462,6 +483,7 @@ int unicode_count_chars (const unsigned char * utf8)
         int ucs2;
         ucs2 = utf8_to_ucs2 (p, & p);
         if (ucs2 < 0) {
+	    /* Return the error from utf8_to_ucs2. */
             return ucs2;
         }
         chars++;
@@ -491,58 +513,58 @@ int unicode_count_chars (const unsigned char * utf8)
 
    switch (c) {
    case BYTE_80_8F:
-       do_something;
+   do_something;
 
    They originally come from the Json3 project. */
 
-#define BYTE_80_8F \
-      0x80: case 0x81: case 0x82: case 0x83: case 0x84: case 0x85: case 0x86:\
- case 0x87: case 0x88: case 0x89: case 0x8A: case 0x8B: case 0x8C: case 0x8D:\
+#define BYTE_80_8F							\
+    0x80: case 0x81: case 0x82: case 0x83: case 0x84: case 0x85: case 0x86: \
+ case 0x87: case 0x88: case 0x89: case 0x8A: case 0x8B: case 0x8C: case 0x8D: \
  case 0x8E: case 0x8F
-#define BYTE_80_9F \
-      0x80: case 0x81: case 0x82: case 0x83: case 0x84: case 0x85: case 0x86:\
- case 0x87: case 0x88: case 0x89: case 0x8A: case 0x8B: case 0x8C: case 0x8D:\
- case 0x8E: case 0x8F: case 0x90: case 0x91: case 0x92: case 0x93: case 0x94:\
- case 0x95: case 0x96: case 0x97: case 0x98: case 0x99: case 0x9A: case 0x9B:\
+#define BYTE_80_9F							\
+    0x80: case 0x81: case 0x82: case 0x83: case 0x84: case 0x85: case 0x86: \
+ case 0x87: case 0x88: case 0x89: case 0x8A: case 0x8B: case 0x8C: case 0x8D: \
+ case 0x8E: case 0x8F: case 0x90: case 0x91: case 0x92: case 0x93: case 0x94: \
+ case 0x95: case 0x96: case 0x97: case 0x98: case 0x99: case 0x9A: case 0x9B: \
  case 0x9C: case 0x9D: case 0x9E: case 0x9F
-#define BYTE_80_BF \
-      0x80: case 0x81: case 0x82: case 0x83: case 0x84: case 0x85: case 0x86:\
- case 0x87: case 0x88: case 0x89: case 0x8A: case 0x8B: case 0x8C: case 0x8D:\
- case 0x8E: case 0x8F: case 0x90: case 0x91: case 0x92: case 0x93: case 0x94:\
- case 0x95: case 0x96: case 0x97: case 0x98: case 0x99: case 0x9A: case 0x9B:\
- case 0x9C: case 0x9D: case 0x9E: case 0x9F: case 0xA0: case 0xA1: case 0xA2:\
- case 0xA3: case 0xA4: case 0xA5: case 0xA6: case 0xA7: case 0xA8: case 0xA9:\
- case 0xAA: case 0xAB: case 0xAC: case 0xAD: case 0xAE: case 0xAF: case 0xB0:\
- case 0xB1: case 0xB2: case 0xB3: case 0xB4: case 0xB5: case 0xB6: case 0xB7:\
- case 0xB8: case 0xB9: case 0xBA: case 0xBB: case 0xBC: case 0xBD: case 0xBE:\
+#define BYTE_80_BF							\
+    0x80: case 0x81: case 0x82: case 0x83: case 0x84: case 0x85: case 0x86: \
+ case 0x87: case 0x88: case 0x89: case 0x8A: case 0x8B: case 0x8C: case 0x8D: \
+ case 0x8E: case 0x8F: case 0x90: case 0x91: case 0x92: case 0x93: case 0x94: \
+ case 0x95: case 0x96: case 0x97: case 0x98: case 0x99: case 0x9A: case 0x9B: \
+ case 0x9C: case 0x9D: case 0x9E: case 0x9F: case 0xA0: case 0xA1: case 0xA2: \
+ case 0xA3: case 0xA4: case 0xA5: case 0xA6: case 0xA7: case 0xA8: case 0xA9: \
+ case 0xAA: case 0xAB: case 0xAC: case 0xAD: case 0xAE: case 0xAF: case 0xB0: \
+ case 0xB1: case 0xB2: case 0xB3: case 0xB4: case 0xB5: case 0xB6: case 0xB7: \
+ case 0xB8: case 0xB9: case 0xBA: case 0xBB: case 0xBC: case 0xBD: case 0xBE: \
  case 0xBF
-#define BYTE_90_BF \
-      0x90: case 0x91: case 0x92: case 0x93: case 0x94: case 0x95: case 0x96:\
- case 0x97: case 0x98: case 0x99: case 0x9A: case 0x9B: case 0x9C: case 0x9D:\
- case 0x9E: case 0x9F: case 0xA0: case 0xA1: case 0xA2: case 0xA3: case 0xA4:\
- case 0xA5: case 0xA6: case 0xA7: case 0xA8: case 0xA9: case 0xAA: case 0xAB:\
- case 0xAC: case 0xAD: case 0xAE: case 0xAF: case 0xB0: case 0xB1: case 0xB2:\
- case 0xB3: case 0xB4: case 0xB5: case 0xB6: case 0xB7: case 0xB8: case 0xB9:\
+#define BYTE_90_BF							\
+    0x90: case 0x91: case 0x92: case 0x93: case 0x94: case 0x95: case 0x96: \
+ case 0x97: case 0x98: case 0x99: case 0x9A: case 0x9B: case 0x9C: case 0x9D: \
+ case 0x9E: case 0x9F: case 0xA0: case 0xA1: case 0xA2: case 0xA3: case 0xA4: \
+ case 0xA5: case 0xA6: case 0xA7: case 0xA8: case 0xA9: case 0xAA: case 0xAB: \
+ case 0xAC: case 0xAD: case 0xAE: case 0xAF: case 0xB0: case 0xB1: case 0xB2: \
+ case 0xB3: case 0xB4: case 0xB5: case 0xB6: case 0xB7: case 0xB8: case 0xB9: \
  case 0xBA: case 0xBB: case 0xBC: case 0xBD: case 0xBE: case 0xBF
-#define BYTE_A0_BF \
-      0xA0: case 0xA1: case 0xA2: case 0xA3: case 0xA4: case 0xA5: case 0xA6:\
- case 0xA7: case 0xA8: case 0xA9: case 0xAA: case 0xAB: case 0xAC: case 0xAD:\
- case 0xAE: case 0xAF: case 0xB0: case 0xB1: case 0xB2: case 0xB3: case 0xB4:\
- case 0xB5: case 0xB6: case 0xB7: case 0xB8: case 0xB9: case 0xBA: case 0xBB:\
+#define BYTE_A0_BF							\
+    0xA0: case 0xA1: case 0xA2: case 0xA3: case 0xA4: case 0xA5: case 0xA6: \
+ case 0xA7: case 0xA8: case 0xA9: case 0xAA: case 0xAB: case 0xAC: case 0xAD: \
+ case 0xAE: case 0xAF: case 0xB0: case 0xB1: case 0xB2: case 0xB3: case 0xB4: \
+ case 0xB5: case 0xB6: case 0xB7: case 0xB8: case 0xB9: case 0xBA: case 0xBB: \
  case 0xBC: case 0xBD: case 0xBE: case 0xBF
-#define BYTE_C2_DF \
-      0xC2: case 0xC3: case 0xC4: case 0xC5: case 0xC6: case 0xC7: case 0xC8:\
- case 0xC9: case 0xCA: case 0xCB: case 0xCC: case 0xCD: case 0xCE: case 0xCF:\
- case 0xD0: case 0xD1: case 0xD2: case 0xD3: case 0xD4: case 0xD5: case 0xD6:\
- case 0xD7: case 0xD8: case 0xD9: case 0xDA: case 0xDB: case 0xDC: case 0xDD:\
+#define BYTE_C2_DF							\
+    0xC2: case 0xC3: case 0xC4: case 0xC5: case 0xC6: case 0xC7: case 0xC8: \
+ case 0xC9: case 0xCA: case 0xCB: case 0xCC: case 0xCD: case 0xCE: case 0xCF: \
+ case 0xD0: case 0xD1: case 0xD2: case 0xD3: case 0xD4: case 0xD5: case 0xD6: \
+ case 0xD7: case 0xD8: case 0xD9: case 0xDA: case 0xDB: case 0xDC: case 0xDD: \
  case 0xDE: case 0xDF
-#define BYTE_E1_EC \
-      0xE1: case 0xE2: case 0xE3: case 0xE4: case 0xE5: case 0xE6: case 0xE7:\
+#define BYTE_E1_EC							\
+    0xE1: case 0xE2: case 0xE3: case 0xE4: case 0xE5: case 0xE6: case 0xE7: \
  case 0xE8: case 0xE9: case 0xEA: case 0xEB: case 0xEC
-#define BYTE_EE_EF \
-      0xEE: case 0xEF
-#define BYTE_F1_F3 \
-      0xF1: case 0xF2: case 0xF3
+#define BYTE_EE_EF				\
+    0xEE: case 0xEF
+#define BYTE_F1_F3				\
+    0xF1: case 0xF2: case 0xF3
 #endif /* def HEADER */
 
 #define UNICODEADDBYTE i++
@@ -693,17 +715,22 @@ valid_utf8 (const unsigned char * input, int input_length)
 
 /* Make "* ptr" point to the start of the first UTF-8 character after
    its initial value. This assumes that there are at least four bytes
-   which can be read, and that * ptr points to valid UTF-8. If ** ptr
-   does not have its top bit set, this does not change the value of *
-   ptr and it returns UNICODE_OK. If "** ptr" has its top bit set, it
-   does not change the value of "* ptr" and it returns UNICODE_OK. If
-   "**ptr" is the second, third, or fourth byte of a multibyte
-   sequence, it is incremented until it is no longer so, or too many
-   bytes have passed. If too many bytes have passed, UNICODE_BAD_UTF8
-   is returned and *ptr is left unchanged. If a valid UTF-8 first byte
-   was found UNICODE_OK is returned, and *ptr is set to the address of
-   the valid byte. Nul bytes (bytes containing zero) are considered
-   valid. */
+   which can be read, and that "* ptr" points to valid UTF-8. 
+
+   If "** ptr" does not have its top bit set, 00xx_xxxx, this does not
+   change the value of "* ptr", and it returns UNICODE_OK. If "** ptr"
+   has its top two bits set, 11xx_xxxx, this does not change the value
+   of "* ptr" and it returns UNICODE_OK. If "**ptr" has its top bit
+   set but its second-to-top bit unset, 10xx_xxxx, so it is the
+   second, third, or fourth byte of a multibyte sequence, "* ptr" is
+   incremented until either "** ptr" is a valid first byte of a UTF-8
+   sequence, or too many bytes have passed for it to be valid
+   UTF-8. If too many bytes have passed, UNICODE_BAD_UTF8 is returned
+   and "*ptr" is left unchanged. If a valid UTF-8 first byte was
+   found, either 11xx_xxxx or 00xx_xxxx, UNICODE_OK is returned, and
+   "*ptr" is set to the address of the valid byte. Nul bytes (bytes
+   containing zero) are considered valid. This does not check for
+   invalid UTF-8 bytes such as 0xFE and 0xFF. */
 
 int
 trim_to_utf8_start (unsigned char ** ptr)
@@ -711,6 +738,7 @@ trim_to_utf8_start (unsigned char ** ptr)
     unsigned char * p = *ptr;
     unsigned char c;
     int i;
+    /* 0xC0 = 1100_0000. */
     c = *p & 0xC0;
     if (c == 0xC0 || c == 0x00) {
 	return UNICODE_OK;
@@ -727,11 +755,12 @@ trim_to_utf8_start (unsigned char ** ptr)
 
 
 
-/*  _____         _       
-   |_   _|__  ___| |_ ___ 
-     | |/ _ \/ __| __/ __|
-     | |  __/\__ \ |_\__ \
-     |_|\___||___/\__|___/ */
+/*   _____         _       
+    |_   _|__  ___| |_ ___ 
+      | |/ _ \/ __| __/ __|
+      | |  __/\__ \ |_\__ \
+      |_|\___||___/\__|___/ 
+*/
                        
 /* Below this is code for testing which is not normally compiled. Use
    "make test" to compile the testing version. */
@@ -740,6 +769,7 @@ trim_to_utf8_start (unsigned char ** ptr)
 
 #include <stdio.h>
 #include <stdlib.h>
+#include "c-tap-test.h"
 
 void print_bytes (const unsigned char * bytes)
 {
@@ -750,26 +780,15 @@ void print_bytes (const unsigned char * bytes)
     fprintf (stderr, "\n");
 }
 
-#define OK(test, message, ...) {			\
-	(*count)++;					\
-	if (test) {					\
-	    printf ("ok %d - ", (*count));		\
-	}						\
-	else {						\
-	    printf ("not ok %d - ", (*count));		\
-	}						\
-	printf (message, ## __VA_ARGS__);		\
-	printf (".\n");					\
-    }
+static const unsigned char * utf8 = (unsigned char *) "漢数字ÔÕÖＸ";
 
-
-void test_ucs2_to_utf8 (const unsigned char * input, int * count)
+void test_ucs2_to_utf8 ()
 {
     /* Buffer to print utf8 out into. */
     unsigned char buffer[0x100];
     /* Offset into buffer. */
     unsigned char * offset;
-    const unsigned char * start = input;
+    const unsigned char * start = utf8;
 
     offset = buffer;
     while (1) {
@@ -787,10 +806,10 @@ void test_ucs2_to_utf8 (const unsigned char * input, int * count)
 	    exit (EXIT_FAILURE);
 	}
         bytes = ucs2_to_utf8 (unicode, offset);
-	OK (bytes > 0,  "no bad conversion");
-	OK (strncmp ((const char *) offset,
-		     (const char *) start, bytes) == 0, 
-	    "round trip OK for %X (%d bytes)", unicode, bytes);
+	TAP_TEST_MSG (bytes > 0,  "no bad conversion");
+	TAP_TEST_MSG (strncmp ((const char *) offset,
+			       (const char *) start, bytes) == 0, 
+		      "round trip OK for %X (%d bytes)", unicode, bytes);
         start = end;
         offset += bytes;
 #if 0
@@ -798,14 +817,13 @@ void test_ucs2_to_utf8 (const unsigned char * input, int * count)
 #endif /* 0 */
     }
     * offset = '\0';
-    OK (strcmp ((const char *) buffer, (const char *) input) == 0,
-	
-	"input %s resulted in identical output %s",
-	input, buffer);
+    TAP_TEST_MSG (strcmp ((const char *) buffer, (const char *) utf8) == 0,
+		  "input %s resulted in identical output %s",
+		  utf8, buffer);
 }
 
 static void
-test_invalid_utf8 (int * count)
+test_invalid_utf8 ()
 {
     unsigned char invalid_utf8[UTF8_MAX_LENGTH];
     int unicode;
@@ -814,14 +832,14 @@ test_invalid_utf8 (int * count)
     snprintf ((char *) invalid_utf8, UTF8_MAX_LENGTH - 1,
 	      "%c%c%c", 0xe8, 0xe4, 0xe5);
     unicode = utf8_to_ucs2 (invalid_utf8, & end);
-    OK (unicode == UNICODE_BAD_UTF8, 
-	"invalid UTF-8 gives incorrect result");
+    TAP_TEST_MSG (unicode == UNICODE_BAD_UTF8, 
+		  "invalid UTF-8 gives incorrect result");
     valid = valid_utf8 (invalid_utf8, strlen ((char *) invalid_utf8));
-    OK (valid == INVALID_UTF8, "Invalid UTF-8 fails valid_utf8");
+    TAP_TEST_MSG (valid == INVALID_UTF8, "Invalid UTF-8 fails valid_utf8");
 }
 
 static void
-test_surrogate_pairs (int * count)
+test_surrogate_pairs ()
 {
     int status;
     int hi;
@@ -843,35 +861,35 @@ test_surrogate_pairs (int * count)
 
     status = unicode_to_surrogates (nogood, & hi, & lo);
 
-    OK (status == UNICODE_NOT_SURROGATE_PAIR, 
-	"low value to surrogate pair breaker returns error");
+    TAP_TEST_MSG (status == UNICODE_NOT_SURROGATE_PAIR, 
+		  "low value to surrogate pair breaker returns error");
 
     status = unicode_to_surrogates (wikipedia_1, & hi, & lo);
-    OK (status == UNICODE_OK,  "Ok with %X", wikipedia_1);
-    OK (hi == 0xD801,  "Got expected %X == 0xD801", hi);
-    OK (lo == 0xDC37,  "Got expected %X == 0xDC37", lo);
+    TAP_TEST_MSG (status == UNICODE_OK,  "Ok with %X", wikipedia_1);
+    TAP_TEST_MSG (hi == 0xD801,  "Got expected %X == 0xD801", hi);
+    TAP_TEST_MSG (lo == 0xDC37,  "Got expected %X == 0xDC37", lo);
     rt = surrogates_to_unicode (hi, lo);
-    OK (rt == wikipedia_1,  "Round trip %X == initial %X",
-	rt, wikipedia_1);
+    TAP_TEST_MSG (rt == wikipedia_1,  "Round trip %X == initial %X",
+		  rt, wikipedia_1);
 
     status = unicode_to_surrogates (wikipedia_2, & hi, & lo);
-    OK (status == UNICODE_OK,  "Ok with %X", wikipedia_1);
-    OK (hi == 0xD852,  "Got expected %X == 0xD852", hi);
-    OK (lo == 0xDF62,  "Got expected %X == 0xDF62", lo);
+    TAP_TEST_MSG (status == UNICODE_OK,  "Ok with %X", wikipedia_1);
+    TAP_TEST_MSG (hi == 0xD852,  "Got expected %X == 0xD852", hi);
+    TAP_TEST_MSG (lo == 0xDF62,  "Got expected %X == 0xDF62", lo);
     rt = surrogates_to_unicode (hi, lo);
-    OK (rt == wikipedia_2,  "Round trip %X == initial %X",
-	rt, wikipedia_2);
+    TAP_TEST_MSG (rt == wikipedia_2,  "Round trip %X == initial %X",
+		  rt, wikipedia_2);
 
     status = unicode_to_surrogates (json_spec, & hi, & lo);
-    OK (status == UNICODE_OK,  "Ok with %X", json_spec);
-    OK (hi == 0xD834,  "Got expected %X == 0xD834", hi);
-    OK (lo == 0xDd1e,  "Got expected %X == 0xDD1e", lo);
+    TAP_TEST_MSG (status == UNICODE_OK,  "Ok with %X", json_spec);
+    TAP_TEST_MSG (hi == 0xD834,  "Got expected %X == 0xD834", hi);
+    TAP_TEST_MSG (lo == 0xDd1e,  "Got expected %X == 0xDD1e", lo);
     rt = surrogates_to_unicode (hi, lo);
-    OK (rt == json_spec,  "Round trip %X == initial %X",
-	rt, json_spec);
+    TAP_TEST_MSG (rt == json_spec,  "Round trip %X == initial %X",
+		  rt, json_spec);
 }
 
-static void test_utf8_bytes (int * count)
+static void test_utf8_bytes ()
 {
     struct tub {
 	int first;
@@ -890,83 +908,80 @@ static void test_utf8_bytes (int * count)
 	int firstbyte;
 	firstbyte = tests[i].first;
 	xbytes = utf8_bytes (firstbyte);
-	OK (xbytes == tests[i].expect, "Got %d (%d) with input %d",
-	    xbytes, tests[i].expect, firstbyte);
+	TAP_TEST_MSG (xbytes == tests[i].expect, "Got %d (%d) with input %d",
+		      xbytes, tests[i].expect, firstbyte);
     }
 }
 
-static const unsigned char * utf8 = (unsigned char *) "漢数字ÔÕÖＸ";
-
 static void
-test_utf8_to_ucs2 (int * count)
+test_utf8_to_ucs2 ()
 {
     const unsigned char * start = utf8;
     while (*start) {
         int unicode;
         const unsigned char * end;
         unicode = utf8_to_ucs2 (start, & end);
-	OK (unicode > 0, "no bad value at %s", start);
+	TAP_TEST_MSG (unicode > 0, "no bad value at %s", start);
         printf ("# %s is %04X, length is %d\n", start, unicode, end - start);
         start = end;
     }
 }
 
 static void
-test_unicode_count_chars (int * count)
+test_unicode_count_chars ()
 {
     int cc;
     cc = unicode_count_chars (utf8);
-    OK (cc == 7, "unicode_count_chars gets seven characters for utf8");
+    TAP_TEST_MSG (cc == 7, "unicode_count_chars gets seven characters for utf8");
     cc = unicode_count_chars_fast (utf8);
-    OK (cc == 7, "unicode_count_chars_fast gets seven characters for utf8");
+    TAP_TEST_MSG (cc == 7, "unicode_count_chars_fast gets seven characters for utf8");
 }
 
 static void
-test_valid_utf8 (int * count)
+test_valid_utf8 ()
 {
     int valid;
     valid = valid_utf8 (utf8, strlen ((const char *) utf8));
-    OK (valid == VALID_UTF8, "Valid UTF-8 passes valid_utf8");
+    TAP_TEST_MSG (valid == VALID_UTF8, "Valid UTF-8 passes valid_utf8");
 }
 
 static void
-test_trim_to_utf8_start (int * count)
+test_trim_to_utf8_start ()
 {
     int status;
-    unsigned char bad[] = {0x99, 0x99, 0x99, 0x99, 0x99, 0x99};
     unsigned char * p;
+    /* Invalid UTF-8. */
+    unsigned char bad[] = {0x99, 0x99, 0x99, 0x99, 0x99, 0x99};
+    /* Valid UTF-8. */
     unsigned char good[] = "化苦";
     unsigned char good2[] = "化abc";
     p = bad;
     status = trim_to_utf8_start (& p);
-    OK (status == UNICODE_BAD_UTF8, "Non-UTF-8 causes error");
-    OK (p == bad, "Did not change pointer");
+    TAP_TEST_MSG (status == UNICODE_BAD_UTF8, "Non-UTF-8 causes error");
+    TAP_TEST_MSG (p == bad, "Did not change pointer");
     p = good + 1;
     status = trim_to_utf8_start (& p);
-    OK (status == UNICODE_OK, "Got OK result");
-    OK (p != good + 1, "Moved p");
-    OK (p == good + 3, "Moved p to the right position");
+    TAP_TEST_MSG (status == UNICODE_OK, "Got TAP_TEST_MSG result");
+    TAP_TEST_MSG (p != good + 1, "Moved p");
+    TAP_TEST_MSG (p == good + 3, "Moved p to the right position");
     p = good2 + 1;
     status = trim_to_utf8_start (& p);
-    OK (status == UNICODE_OK, "Got OK result");
-    OK (p != good2 + 1, "Moved p");
-    OK (p == good2 + 3, "Moved p to the right position");
+    TAP_TEST_MSG (status == UNICODE_OK, "Got TAP_TEST_MSG result");
+    TAP_TEST_MSG (p != good2 + 1, "Moved p");
+    TAP_TEST_MSG (p == good2 + 3, "Moved p to the right position");
 }
 
 int main ()
 {
-    /* Test counter for TAP. */
-    int count;
-    count = 0;
-    test_utf8_to_ucs2 (& count);
-    test_ucs2_to_utf8 (utf8, & count);
-    test_invalid_utf8 (& count);
-    test_unicode_count_chars (& count);
-    test_surrogate_pairs (& count);
-    test_utf8_bytes (& count);
-    test_valid_utf8 (& count);
-    test_trim_to_utf8_start (& count);
-    printf ("1..%d\n", count);
+    test_utf8_to_ucs2 ();
+    test_ucs2_to_utf8 ();
+    test_invalid_utf8 ();
+    test_unicode_count_chars ();
+    test_surrogate_pairs ();
+    test_utf8_bytes ();
+    test_valid_utf8 ();
+    test_trim_to_utf8_start ();
+    TAP_PLAN;
 }
 
 #endif /* def TEST */
