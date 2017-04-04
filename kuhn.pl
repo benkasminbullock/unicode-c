@@ -9,17 +9,26 @@ my $input = read_binary ("$Bin/UTF-8-test.txt");
 my $tln = Text::LineNumber->new ($input);
 while ($input =~ m!
 		      ([0-9]+\.[0-9]+\.[0-9]+)
+		      [^U]+
+		      (?:\(?U[-\+]([0-9A-F]+)\)?)?
+#		      (U)?
 		      .*
 		      [:=]
-		      \s+
-		      "(.+)"
-		      \s*
-		      \|
+		      \h+
+		      "((?:\x00|[^"])+)"
+		      \h*
+		      \|?
 		  !xg) {
     my $id = $1;
-    my $bytes = $2;
+    my $expect = $2;
+    my $bytes = $3;
     $id =~ s!\.!_!g;
-    $bytes =~ s/([\x80-\xFF])/sprintf ("\\x%02X", ord ($1))/ge;
+    $bytes =~ s/([\x00-\x20\x7F-\xFF])/sprintf ("\\x%02X", ord ($1))/ge;
     print "kuhn_$id = \"$bytes\";\n";
-#    exit;
+    if ($expect) {
+	print "$expect\n";
+    }
+    else {
+	print "No expect\n";
+    }
 }
