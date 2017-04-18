@@ -2,6 +2,7 @@
 #include <string.h>
 #include <stdio.h>
 #include "unicode.h"
+#include "unicode-character-class.h"
 
 /* Return a true or false value depending on whether ucs is in the
    range of kana. */

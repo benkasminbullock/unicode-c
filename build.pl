@@ -3,6 +3,6 @@ use warnings;
 use strict;
 use Perl::Build;
 perl_build (
-    makefile => 'makefile',
+    makefile => 'Makefile',
 );
 
