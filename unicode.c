@@ -140,6 +140,9 @@ int utf8_bytes (unsigned char c)
     return r;
 }
 
+/* This macro converts four bytes of UTF-8 into the corresponding code
+   point. */
+
 #define FOUR(x)					\
     (((x[0] & 0x07) << 18)			\
      | ((x[1] & 0x3F) << 12)			\
@@ -184,16 +187,19 @@ utf8_no_checks (const unsigned char * input, const unsigned char ** end_ptr)
     }
 }
 
-/* Convert a UTF-8 encoded character in "input" into a number. This
-   function returns the unicode value of the UTF-8 character if
-   successful, and a negative number if not successful. "end_ptr" is
-   set to the next character after the read character on
-   success. "end_ptr" is set to the start of input on
-   failure. "end_ptr" may not be null. If the UTF-8 is not in the
-   shortest possible form, UNICODE_NON_SHORTEST error is returned. If
-   there is a zero byte in "input", UNICODE_EMPTY_INPUT is
-   returned. If the second or later bytes are not valid UTF-8,
-   UNICODE_BAD_UTF8 is returned. If the value extrapolated from
+/* This function converts a UTF-8 encoded character in "input" into a
+   number. The return value is the Unicode code point corresponding to
+   the UTF-8 character in "input" if successful, and a negative number
+   if not successful. "*end_ptr" is set to the next character after
+   the read character on success. "*end_ptr" is set to the start of
+   input on failure. "end_ptr" may not be null. 
+
+   If the first byte of "input" is zero, UNICODE_EMPTY_INPUT is
+   returned. If the first byte of "input" is not valid UTF-8,
+   UNICODE_BAD_INPUT is returned. If the second or later bytes of
+   "input" are not valid UTF-8, UNICODE_BAD_UTF8 is returned. If the
+   UTF-8 is not in the shortest possible form, the error
+   UNICODE_NON_SHORTEST is returned. If the value extrapolated from
    "input" is greater than UNICODE_MAXIMUM, UNICODE_TOO_BIG is
    returned. If the value extrapolated from "input" ends in 0xFFFF or
    0xFFFE, UNICODE_NOT_CHARACTER is returned. */
