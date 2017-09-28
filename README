@@ -36,9 +36,13 @@ The header file is under "Browse" then "unicode.h".
 * Testing:
 
 Compile with -DTEST or use "make test" to run the tests. The tests are
-contained in unicode.c itself. Please refer to the source
+contained in "unicode.c" itself. Please refer to the source
 code. Running the tests requires the "prove" utility which is part of
-Perl.
+Perl. It requires the file "c-tap-test.h" which may be obtained at
+
+   https://www.lemoda.net/c/simple-tap-test/index.html
+
+It also requires editing the file "Makefile".
 
 * Documentation:
 
@@ -50,8 +54,8 @@ Either send email or use the github "issues" pages to report bugs.
 
 * Known problems:
 
-** The library uses UCS2 where it should have said UTF-16, and similar
-   misnamings.
+** The library uses UCS2 where it should have said UTF-16. There are a
+   few similar misnamings.
 
 ** 0xFF is regarded as a valid UTF-8 first byte by some routines.
 

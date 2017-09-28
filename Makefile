@@ -31,6 +31,10 @@ unicode-test:	unicode.c unicode.h c-tap-test.h
 unicode-character-class-test:	unicode-character-class.c unicode.o unicode-character-class.h unicode.h
 	$(CC) $(CFLAGS) -o $@ -D TEST unicode-character-class.c unicode.o
 
+# Obtain the file "c-tap-test.h" from 
+#
+# https://www.lemoda.net/c/simple-tap-test/index.html
+
 CTT=/home/ben/projects/c-tap-test
 
 c-tap-test.h: $(CTT)/$@
