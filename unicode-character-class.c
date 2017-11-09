@@ -73,6 +73,8 @@ int main ()
 	OK (utf8_is_kana_chars ((unsigned char *) test[i], 0) == expect[i],
 	    counter, "%s %d", test[i], expect[i]);
     }
+    OK (utf16_is_kanji (0x6050), counter, "OK");
+    OK (! utf16_is_kanji (0x60), counter, "OK");
     printf ("1..%d\n", counter);
     return 0;
 }
