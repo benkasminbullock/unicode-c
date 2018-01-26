@@ -826,10 +826,12 @@ void print_bytes (const unsigned char * bytes)
 
 static const unsigned char * utf8 = (unsigned char *) "漢数字ÔÕÖＸ";
 
+#define BUFFSIZE 0x100
+
 void test_ucs2_to_utf8 ()
 {
     /* Buffer to print utf8 out into. */
-    unsigned char buffer[0x100];
+    unsigned char buffer[BUFFSIZE];
     /* Offset into buffer. */
     unsigned char * offset;
     const unsigned char * start = utf8;
@@ -857,6 +859,12 @@ void test_ucs2_to_utf8 ()
 		      "round trip OK for %X (%d bytes)", unicode, bytes);
         start = end;
         offset += bytes;
+	if (offset - buffer >= BUFFSIZE) {
+	    fprintf (stderr, "%s:%d: out of space in buffer.\n",
+		     __FILE__, __LINE__);
+	    // exit ok
+	    exit (EXIT_FAILURE);
+	}
     }
     * offset = '\0';
     TAP_TEST_MSG (strcmp ((const char *) buffer, (const char *) utf8) == 0,
