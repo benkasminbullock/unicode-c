@@ -51,9 +51,9 @@
 /* All of the functions in this library return an "int32_t". Negative
    values are used to indicate errors. */
 
-/* The following return value indicates a successful completion of a
-   routines which doesn't use the return value to communicate data
-   back to the caller. */
+/* This return value indicates the successful completion of a routine
+   which doesn't use the return value to communicate data back to the
+   caller. */
 
 #define UNICODE_OK 0
 
@@ -104,11 +104,11 @@
 
 #define UNICODE_NOT_CHARACTER -8
 
-/* The UTF-8 is valid. */
+/* This return value indicates that the UTF-8 is valid. */
 
 #define UTF8_VALID 1
 
-/* The UTF-8 is not valid. */
+/* This return value indicates that the UTF-8 is not valid. */
 
 #define UTF8_INVALID 0
 

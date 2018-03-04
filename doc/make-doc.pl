@@ -31,6 +31,10 @@ while ($text =~ /($trad_comment_re)?\s*^\#
     my $value = $3;
     if ($1) {
 	my $comment = decomment ($1);
+    # Remove excessive spaces from the comment and trim
+    # leading/trailing whitespace.
+    $comment =~ s/\n\s+/ /g;
+    $comment =~ s/^\s+|\s+$//g;
 	$m2c{$macro} = $comment;
 #	print "$macro $comment\n";
     }
@@ -42,22 +46,29 @@ my @functions;
 my $tln = Text::LineNumber->new($text);
 while ($text =~ /($trad_comment_re)?
 		 \s+
-		 ^int
+		 ^(int|int32_t)
 		 \s*
 		 ($word_re)
 		 \s*
 		 (\([^)]+\))
 		/gmsx) {
-    my $function = $2;
     my $comment = $1;
-    my $args = $3;
+    my $type = $2;
+    my $function = $3;
+    my $args = $4;
     if (! $comment) {
 	my $line = $tln->off2lnr (pos ($text));
 	warn "$in:$line: No comment for $function.\n";
 	$comment = '';
     }
     $comment = decomment ($comment);
-#    $comment =~ s/\n\s+/ /g;
+    # Convert double spaces into paragraph markers.
+    $comment =~ s/\n\s*\n/\n.Pp\n/g;
+    # Remove excessive spaces from the comment and trim
+    # leading/trailing whitespace.
+    $comment =~ s/\n\s+/ /g;
+    $comment =~ s/\.Pp\s(\S)/.Pp\n$1/g;
+    $comment =~ s/^\s+|\s+$//g;
 #    print "$macro_re\n";
     $comment =~ s/($macro_re)/$1 ($macros{$1})/g;
     $args =~ s/^\s*\(|\)\s*$//g;
@@ -66,12 +77,16 @@ while ($text =~ /($trad_comment_re)?
 	name => $function,
 	args => \@args,
 	desc => $comment,
+	type => $type,
     };
+}
+if (! @functions) {
+warn "No functions found at all";
 }
 @functions = sort_by {$_->{name}} @functions;
 my @macros;
 for my $m (sort keys %macros) {
-    if ($m =~ /_SUR_|LOW/) {
+    if ($m =~ /_SUR_|LOW|BUFFSIZE|TEN_BITS/) {
 	next;
     }
     my $meaning = $m2c{$m};

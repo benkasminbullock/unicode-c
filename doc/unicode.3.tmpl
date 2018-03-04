@@ -5,13 +5,14 @@
 .Nm [% function.name %]
 [%- END %]
 .Sh SYNOPSIS
+.In stdint.h
 .In unicode.h
 .Sh DESCRIPTION
 [% description %]
 .Sh FUNCTIONS
 [%- FOR function IN functions %]
 .Ss [% function.name %]
-.Ft int
+.Ft [% function.type %]
 .Fo [% function.name %]
 [%- FOR arg IN function.args %]
 .Fa "[% arg %]"
@@ -31,4 +32,3 @@
 https://www.lemoda.net/tools/uniconvert/index.html
 .Pp
 https://github.com/benkasminbullock/unicode-c
-
