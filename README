@@ -39,16 +39,13 @@ integers). All of the UTF-8 inputs are of the type "unsigned char".
 Compile with -DTEST or use "make test" to run the tests. The tests are
 contained in "unicode.c" itself. Please refer to the source
 code. Running the tests requires the "prove" utility which is part of
-Perl. It requires the file "c-tap-test.h" which may be obtained at
-
-   https://www.lemoda.net/c/simple-tap-test/index.html
-
-It also requires editing the file "Makefile".
+Perl.
 
 * Dependencies
 
 This C code uses the definitions from the standard header file
-"stdint.h" to get consistent integer types.
+"stdint.h" to get consistent integer types, and functions from
+"string.h" to get lengths of strings, and for testing.
 
 * Bugs:
 
