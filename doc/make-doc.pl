@@ -2,15 +2,19 @@
 use warnings;
 use strict;
 use utf8;
-use BKB::Stuff;
-use FindBin '$Bin';
+
+# All of these modules are available on CPAN 2018-10-25
+
 use C::Tokenize ':all';
+use Convert::Moji 'make_regex';
+use File::Slurper qw/read_text write_text/;
+use FindBin '$Bin';
 use JSON::Create 'create_json';
-use Deploy 'write_ro_file';
-use Text::LineNumber;
 use List::UtilsBy 'sort_by';
+use Text::LineNumber;
+
 my $in = "$Bin/../unicode.c";
-my $text = whole ($in);
+my $text = read_text ($in);
 
 my %macros;
 my %m2c;
@@ -40,7 +44,7 @@ while ($text =~ /($trad_comment_re)?\s*^\#
     }
     $macros{$macro} = $value;
 }
-my $macro_re = hash2re (\%macros);
+my $macro_re = make_regex (keys %macros);
 #exit;
 my @functions;
 my $tln = Text::LineNumber->new($text);
@@ -108,4 +112,8 @@ my %doc = (
 );
 my $json = create_json (\%doc);
 #print "$json\n";
-write_ro_file ($outfile, $json);
+if (-f $outfile) {
+    chmod 0644, $outfile or die $!;
+}
+write_text ($outfile, $json);
+chmod 0444, $outfile or die $!;

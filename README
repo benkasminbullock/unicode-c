@@ -1,5 +1,5 @@
 This is a Unicode library in the programming language C which deals
-with conversions to and from the UTF-8 format.
+with conversions to and from the UTF-8 format. 
 
 * Author: 
 
@@ -31,7 +31,22 @@ distributions:
     https://metacpan.org/release/JSON-Create
     https://metacpan.org/release/JSON-Parse
 
-The header file is under "Browse" then "unicode.h".
+The header file is under "Browse" then "unicode.h". I don't provide
+direct links here since these may be updated for different versions.
+
+* Documentation:
+
+Documentation consists of the comments in the source code. 
+
+These comments can be converted into an mdoc-format manual page called
+"unicode.3", or an HTML page called "unicode.html" using scripts in
+the "doc" subdirectory of the repository. Running these scripts may
+require you to install some Perl modules from CPAN.
+
+* Conventions
+
+All the functions return values of type int32_t (32-bit signed
+integers). All of the UTF-8 inputs are of the type "unsigned char".
 
 * Testing:
 
@@ -44,9 +59,10 @@ Perl. It requires the file "c-tap-test.h" which may be obtained at
 
 It also requires editing the file "Makefile".
 
-* Documentation:
+* Dependencies
 
-Documentation currently consists of the comments in the source code.
+This C code uses the definitions from the standard header file
+"stdint.h" to get consistent integer types.
 
 * Bugs:
 
