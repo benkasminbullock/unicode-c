@@ -1,0 +1,222 @@
+<html><head><title>A C Unicode and UTF-8 library</title>
+</head>
+<body><h1>
+A C Unicode and UTF-8 library</h1>
+<h2>
+Functions</h2>
+<div class="function">
+<h3 id="surrogate_to_utf8">
+surrogate_to_utf8</h3>
+<pre>
+int <b>surrogate_to_utf8</b> (int32_t hi, int32_t lo, unsigned char * utf8);
+</pre>
+<p>
+Convert the surrogate pair in <code>hi</code> and <code>lo</code> to UTF-8 in <code>utf8</code>. This calls <a href="#surrogates_to_unicode">surrogates_to_unicode</a> and <a href="#ucs2_to_utf8">ucs2_to_utf8</a>, thus it can return the same errors as them, and has the same restriction on <code>utf8</code> as <a href="#ucs2_to_utf8">ucs2_to_utf8</a>.</p>
+</div>
+<div class="function">
+<h3 id="surrogates_to_unicode">
+surrogates_to_unicode</h3>
+<pre>
+int <b>surrogates_to_unicode</b> (int32_t hi, int32_t lo);
+</pre>
+<p>
+Convert a surrogate pair in <code>hi</code> and <code>lo</code> to a single Unicode value. The return value is the Unicode value. If the return value is negative, an error has occurred. If <code>hi</code> and <code>lo</code> do not form a surrogate pair, the error value <a href="#UNICODE_NOT_SURROGATE_PAIR">UNICODE_NOT_SURROGATE_PAIR</a> (-3) is returned. 
+.Pp
+<A HREF="https://android.googlesource.com/platform/external/id3lib/+/master/unicode.org/ConvertUTF.c">https://android.googlesource.com/platform/external/id3lib/+/master/unicode.org/ConvertUTF.c</A></p>
+</div>
+<div class="function">
+<h3 id="trim_to_utf8_start">
+trim_to_utf8_start</h3>
+<pre>
+int <b>trim_to_utf8_start</b> (unsigned char ** ptr);
+</pre>
+<p>
+Make <code>*ptr</code> point to the start of the first UTF-8 character after its initial value. This assumes that there are at least four bytes which can be read, and that <code>*ptr</code> points to valid UTF-8. 
+.Pp
+If <code>**ptr</code> does not have its top bit set, 00xx_xxxx, this does not change the value of <code>*ptr</code>, and it returns <a href="#UNICODE_OK">UNICODE_OK</a> (0). If <code>**ptr</code> has its top two bits set, 11xx_xxxx, this does not change the value of <code>*ptr</code> and it returns <a href="#UNICODE_OK">UNICODE_OK</a> (0). If <code>**ptr</code> has its top bit set but its second-to-top bit unset, 10xx_xxxx, so it is the second, third, or fourth byte of a multibyte sequence, <code>*ptr</code> is incremented until either <code>**ptr</code> is a valid first byte of a UTF-8 sequence, or too many bytes have passed for it to be valid UTF-8. If too many bytes have passed, <a href="#UTF8_BAD_CONTINUATION_BYTE">UTF8_BAD_CONTINUATION_BYTE</a> (-4) is returned and <code>*ptr</code> is left unchanged. If a valid UTF-8 first byte was found, either 11xx_xxxx or 00xx_xxxx, <a href="#UNICODE_OK">UNICODE_OK</a> (0) is returned, and <code>*ptr</code> is set to the address of the valid byte. Nul bytes (bytes containing zero) are considered valid. This does not check for invalid UTF-8 bytes such as 0xFE and 0xFF.</p>
+</div>
+<div class="function">
+<h3 id="ucs2_to_utf8">
+ucs2_to_utf8</h3>
+<pre>
+int <b>ucs2_to_utf8</b> (int32_t ucs2, unsigned char * utf8);
+</pre>
+<p>
+Input: a Unicode code point, <code>ucs2</code>. 
+.Pp
+Output: UTF-8 characters in buffer <code>utf8</code>. 
+.Pp
+Return value: the number of bytes written into <code>utf8</code>, or a negative number if there was an error. If the value of <code>ucs2</code> is invalid because of being in the surrogate pair range from 0xD800 to 0xDFFF, the return value is <a href="#UNICODE_SURROGATE_PAIR">UNICODE_SURROGATE_PAIR</a> (-2), else if the value is too big to fit into four bytes of UTF-8, <a href="#UNICODE_UTF8_4">UNICODE_UTF8_4</a> (0x1fffff), the return value is <a href="#UNICODE_TOO_BIG">UNICODE_TOO_BIG</a> (-7). However, it does not insist on ucs2 being less than <a href="#UNICODE_MAXIMUM">UNICODE_MAXIMUM</a> (0x10ffff), so the user needs to check that <code>ucs2</code> is a valid code point. It also does not check for invalid characters, such as 0xFFFF.
+.Pp
+This adds a zero byte to the end of the string. It assumes that the buffer <code>utf8</code> has at least UNICODE_MAX_LENGTH (5) bytes of space to write to, without checking.</p>
+</div>
+<div class="function">
+<h3 id="unicode_chars_to_bytes">
+unicode_chars_to_bytes</h3>
+<pre>
+int <b>unicode_chars_to_bytes</b> (const unsigned char * utf8, int32_t n_chars);
+</pre>
+<p>
+Given a nul-terminated string <code>utf8</code> and a number of Unicode characters <code>n_chars</code>, return the number of bytes into <code>utf8</code> at which the end of the characters occurs. A negative value indicates some kind of error. If <code>utf8</code> contains a zero byte, the return value is <a href="#UNICODE_EMPTY_INPUT">UNICODE_EMPTY_INPUT</a> (-5). This may also return any of the error values of "<a href="#utf8_to_ucs2">utf8_to_ucs2</a>".</p>
+</div>
+<div class="function">
+<h3 id="unicode_count_chars">
+unicode_count_chars</h3>
+<pre>
+int <b>unicode_count_chars</b> (const unsigned char * utf8);
+</pre>
+<p>
+Given a nul-terminated string <code>utf8</code>, return the total number of Unicode characters it contains.
+.Pp
+Return value
+.Pp
+If an error occurs, this may return <a href="#UTF8_BAD_LEADING_BYTE">UTF8_BAD_LEADING_BYTE</a> (-1) or any of the errors of "<a href="#utf8_to_ucs2">utf8_to_ucs2</a>".</p>
+</div>
+<div class="function">
+<h3 id="unicode_count_chars_fast">
+unicode_count_chars_fast</h3>
+<pre>
+int <b>unicode_count_chars_fast</b> (const unsigned char * utf8);
+</pre>
+<p>
+Like <a href="#unicode_count_chars">unicode_count_chars</a>, but without error checks or validation of the input. This only checks the first byte of each UTF-8 sequence. It may return <a href="#UTF8_BAD_LEADING_BYTE">UTF8_BAD_LEADING_BYTE</a> (-1) if the first byte is invalid.</p>
+</div>
+<div class="function">
+<h3 id="unicode_to_surrogates">
+unicode_to_surrogates</h3>
+<pre>
+int <b>unicode_to_surrogates</b> (unsigned unicode, int32_t * hi_ptr, int32_t * lo_ptr);
+</pre>
+<p>
+This converts the Unicode code point in <code>unicode</code> into a surrogate pair, and returns the two parts in <code>*hi_ptr</code> and <code>*lo_ptr</code>. 
+.Pp
+Return value:
+.Pp
+If <code>unicode</code> does not need to be a surrogate pair, the error <a href="#UNICODE_NOT_SURROGATE_PAIR">UNICODE_NOT_SURROGATE_PAIR</a> (-3) is returned, and the values of <code>*hi_ptr</code> and <code>*lo_ptr</code> are undefined. If the conversion is successful, <a href="#UNICODE_OK">UNICODE_OK</a> (0) is returned.</p>
+</div>
+<div class="function">
+<h3 id="utf8_bytes">
+utf8_bytes</h3>
+<pre>
+int <b>utf8_bytes</b> (unsigned char c);
+</pre>
+<p>
+This function returns the number of bytes of UTF-8 a sequence starting with byte <code>c</code> will become, either 1 (c = 0000xxxx), 2 (c = 110xxxxx), 3 (c = 1110xxxx), or 4 (c = 111100xx or c = 11110100). If <code>c</code> is not a valid UTF-8 first byte, the value <a href="#UTF8_BAD_LEADING_BYTE">UTF8_BAD_LEADING_BYTE</a> (-1) is returned.</p>
+</div>
+<div class="function">
+<h3 id="utf8_no_checks">
+utf8_no_checks</h3>
+<pre>
+int <b>utf8_no_checks</b> (const unsigned char * input, const unsigned char ** end_ptr);
+</pre>
+<p>
+Try to convert <code>input</code> from UTF-8 to UCS-2, and return a value even if the input is partly broken.  This checks the first byte of the input, but it doesn't check the subsequent bytes.</p>
+</div>
+<div class="function">
+<h3 id="utf8_to_ucs2">
+utf8_to_ucs2</h3>
+<pre>
+int <b>utf8_to_ucs2</b> (const unsigned char * input, const unsigned char ** end_ptr);
+</pre>
+<p>
+This function converts UTF-8 encoded bytes in <code>input</code> into the equivalent Unicode code point. The return value is the Unicode code point corresponding to the UTF-8 character in <code>input</code> if successful, and a negative number if not successful. <code>*end_ptr</code> is set to the next character after the read character on success. <code>*end_ptr</code> is set to the start of input on failure. <code>end_ptr</code> may not be null.
+.Pp
+If the first byte of <code>input</code> is zero, <a href="#UNICODE_EMPTY_INPUT">UNICODE_EMPTY_INPUT</a> (-5) is returned. If the first byte of <code>input</code> is not valid UTF-8, <a href="#UTF8_BAD_LEADING_BYTE">UTF8_BAD_LEADING_BYTE</a> (-1) is returned. If the second or later bytes of <code>input</code> are not valid UTF-8, <a href="#UTF8_BAD_CONTINUATION_BYTE">UTF8_BAD_CONTINUATION_BYTE</a> (-4) is returned. If the UTF-8 is not in the shortest possible form, the error <a href="#UTF8_NON_SHORTEST">UTF8_NON_SHORTEST</a> (-6) is returned. If the value extrapolated from <code>input</code> is greater than <a href="#UNICODE_MAXIMUM">UNICODE_MAXIMUM</a> (0x10ffff), <a href="#UNICODE_TOO_BIG">UNICODE_TOO_BIG</a> (-7) is returned. If the value extrapolated from <code>input</code> ends in 0xFFFF or 0xFFFE, <a href="#UNICODE_NOT_CHARACTER">UNICODE_NOT_CHARACTER</a> (-8) is returned.</p>
+</div>
+<div class="function">
+<h3 id="valid_utf8">
+valid_utf8</h3>
+<pre>
+int <b>valid_utf8</b> (const unsigned char * input, int32_t input_length);
+</pre>
+<p>
+Given <code>input</code> and <code>input_length</code>, validate <code>input</code> byte by byte up to <code>input_length</code>. The return value may be <a href="#UTF8_VALID">UTF8_VALID</a> (1) or <a href="#UTF8_INVALID">UTF8_INVALID</a> (0).</p>
+</div>
+<h2>
+Constants and return values</h2>
+<div class="macro">
+<h3 id="UNICODE_EMPTY_INPUT">
+UNICODE_EMPTY_INPUT (-5)</h3>
+<p>
+This return value indicates a zero byte was found in a string which was supposed to contain UTF-8 bytes. It is returned only by the functions which are documented as not allowing zero bytes.</p>
+</div>
+<div class="macro">
+<h3 id="UNICODE_MAXIMUM">
+UNICODE_MAXIMUM (0x10ffff)</h3>
+<p>
+The maximum possible value of a Unicode code point. See <A HREF="http://www.cl.cam.ac.uk/~mgk25/unicode.html#ucs">http://www.cl.cam.ac.uk/~mgk25/unicode.html#ucs</A>.</p>
+</div>
+<div class="macro">
+<h3 id="UNICODE_NOT_CHARACTER">
+UNICODE_NOT_CHARACTER (-8)</h3>
+<p>
+This return value indicates that the Unicode code-point ended with either 0xFFFF or 0xFFFE, meaning it cannot be used as a character code point.</p>
+</div>
+<div class="macro">
+<h3 id="UNICODE_NOT_SURROGATE_PAIR">
+UNICODE_NOT_SURROGATE_PAIR (-3)</h3>
+<p>
+This return value means that code points which did not form a surrogate pair were tried to be converted into a code point as if they were a surrogate pair.</p>
+</div>
+<div class="macro">
+<h3 id="UNICODE_OK">
+UNICODE_OK (0)</h3>
+<p>
+This return value indicates the successful completion of a routine which doesn't use the return value to communicate data back to the caller.</p>
+</div>
+<div class="macro">
+<h3 id="UNICODE_SURROGATE_PAIR">
+UNICODE_SURROGATE_PAIR (-2)</h3>
+<p>
+This return value means the caller attempted to turn a code point for a surrogate pair into UTF-8.</p>
+</div>
+<div class="macro">
+<h3 id="UNICODE_TOO_BIG">
+UNICODE_TOO_BIG (-7)</h3>
+<p>
+This return value indicates that there was an attempt to convert a code point which was greater than <a href="#UNICODE_MAXIMUM">UNICODE_MAXIMUM</a> or <a href="#UNICODE_UTF8_4">UNICODE_UTF8_4</a> into UTF-8 bytes.</p>
+</div>
+<div class="macro">
+<h3 id="UNICODE_UTF8_4">
+UNICODE_UTF8_4 (0x1fffff)</h3>
+<p>
+The maximum possible value which will fit into four bytes of UTF-8. This is larger than <a href="#UNICODE_MAXIMUM">UNICODE_MAXIMUM</a>.</p>
+</div>
+<div class="macro">
+<h3 id="UTF8_BAD_CONTINUATION_BYTE">
+UTF8_BAD_CONTINUATION_BYTE (-4)</h3>
+<p>
+This return value means that input which was supposed to be UTF-8 encoded contained an invalid continuation byte. If the leading byte of a UTF-8 sequence is not valid, <a href="#UTF8_BAD_LEADING_BYTE">UTF8_BAD_LEADING_BYTE</a> is returned instead of this.</p>
+</div>
+<div class="macro">
+<h3 id="UTF8_BAD_LEADING_BYTE">
+UTF8_BAD_LEADING_BYTE (-1)</h3>
+<p>
+This return value means that the leading byte of a UTF-8 sequence was not valid.</p>
+</div>
+<div class="macro">
+<h3 id="UTF8_INVALID">
+UTF8_INVALID (0)</h3>
+<p>
+This return value indicates that the UTF-8 is not valid.</p>
+</div>
+<div class="macro">
+<h3 id="UTF8_MAX_LENGTH">
+UTF8_MAX_LENGTH (5)</h3>
+<p>
+The maximum number of bytes we need to contain any Unicode code point as UTF-8 as a C string. This length includes one trailing nul byte.</p>
+</div>
+<div class="macro">
+<h3 id="UTF8_NON_SHORTEST">
+UTF8_NON_SHORTEST (-6)</h3>
+<p>
+This return value indicates that UTF-8 bytes were not in the shortest possible form. See <A HREF="http://www.cl.cam.ac.uk/~mgk25/unicode.html#utf-8">http://www.cl.cam.ac.uk/~mgk25/unicode.html#utf-8</A>.</p>
+</div>
+<div class="macro">
+<h3 id="UTF8_VALID">
+UTF8_VALID (1)</h3>
+<p>
+This return value indicates that the UTF-8 is valid.</p>
+</div>
+</body>
+</html>

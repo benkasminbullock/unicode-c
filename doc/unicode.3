@@ -1,0 +1,197 @@
+.Dd Sun Mar  4 03:01:52 2018
+.Dt UNICODE 3
+.Sh NAME
+.Nm surrogate_to_utf8
+.Nm surrogates_to_unicode
+.Nm trim_to_utf8_start
+.Nm ucs2_to_utf8
+.Nm unicode_chars_to_bytes
+.Nm unicode_count_chars
+.Nm unicode_count_chars_fast
+.Nm unicode_to_surrogates
+.Nm utf8_bytes
+.Nm utf8_no_checks
+.Nm utf8_to_ucs2
+.Nm valid_utf8
+.Sh SYNOPSIS
+.In stdint.h
+.In unicode.h
+.Sh DESCRIPTION
+ This file is a Unicode library in the programming language C which
+   deals with conversions to and from the UTF-8 format. 
+.Sh FUNCTIONS
+.Ss surrogate_to_utf8
+.Ft int32_t
+.Fo surrogate_to_utf8
+.Fa "int32_t hi"
+.Fa "int32_t lo"
+.Fa "unsigned char * utf8"
+.Fc
+.Pp
+Convert the surrogate pair in "hi" and "lo" to UTF-8 in "utf8". This calls surrogates_to_unicode and ucs2_to_utf8, thus it can return the same errors as them, and has the same restriction on "utf8" as ucs2_to_utf8.
+.Ss surrogates_to_unicode
+.Ft int32_t
+.Fo surrogates_to_unicode
+.Fa "int32_t hi"
+.Fa "int32_t lo"
+.Fc
+.Pp
+Convert a surrogate pair in "hi" and "lo" to a single Unicode value. The return value is the Unicode value. If the return value is negative, an error has occurred. If "hi" and "lo" do not form a surrogate pair, the error value UNICODE_NOT_SURROGATE_PAIR (-3) is returned. 
+.Pp
+https://android.googlesource.com/platform/external/id3lib/+/master/unicode.org/ConvertUTF.c
+.Ss trim_to_utf8_start
+.Ft int32_t
+.Fo trim_to_utf8_start
+.Fa "unsigned char ** ptr"
+.Fc
+.Pp
+Make "* ptr" point to the start of the first UTF-8 character after its initial value. This assumes that there are at least four bytes which can be read, and that "* ptr" points to valid UTF-8. 
+.Pp
+If "** ptr" does not have its top bit set, 00xx_xxxx, this does not change the value of "* ptr", and it returns UNICODE_OK (0). If "** ptr" has its top two bits set, 11xx_xxxx, this does not change the value of "* ptr" and it returns UNICODE_OK (0). If "**ptr" has its top bit set but its second-to-top bit unset, 10xx_xxxx, so it is the second, third, or fourth byte of a multibyte sequence, "* ptr" is incremented until either "** ptr" is a valid first byte of a UTF-8 sequence, or too many bytes have passed for it to be valid UTF-8. If too many bytes have passed, UTF8_BAD_CONTINUATION_BYTE (-4) is returned and "*ptr" is left unchanged. If a valid UTF-8 first byte was found, either 11xx_xxxx or 00xx_xxxx, UNICODE_OK (0) is returned, and "*ptr" is set to the address of the valid byte. Nul bytes (bytes containing zero) are considered valid. This does not check for invalid UTF-8 bytes such as 0xFE and 0xFF.
+.Ss ucs2_to_utf8
+.Ft int32_t
+.Fo ucs2_to_utf8
+.Fa "int32_t ucs2"
+.Fa "unsigned char * utf8"
+.Fc
+.Pp
+Input: a Unicode code point, "ucs2". 
+.Pp
+Output: UTF-8 characters in buffer "utf8". 
+.Pp
+Return value: the number of bytes written into "utf8", or a negative number if there was an error. If the value of "ucs2" is invalid because of being in the surrogate pair range from 0xD800 to 0xDFFF, the return value is UNICODE_SURROGATE_PAIR (-2), else if the value is too big to fit into four bytes of UTF-8, UNICODE_UTF8_4 (0x1fffff), the return value is UNICODE_TOO_BIG (-7). However, it does not insist on ucs2 being less than UNICODE_MAXIMUM (0x10ffff), so the user needs to check that "ucs2" is a valid code point. It also does not check for invalid characters, such as 0xFFFF.
+.Pp
+This adds a zero byte to the end of the string. It assumes that the buffer "utf8" has at least UNICODE_MAX_LENGTH (5) bytes of space to write to, without checking.
+.Ss unicode_chars_to_bytes
+.Ft int32_t
+.Fo unicode_chars_to_bytes
+.Fa "const unsigned char * utf8"
+.Fa "int32_t n_chars"
+.Fc
+.Pp
+Given a nul-terminated string "utf8" and a number of Unicode characters "n_chars", return the number of bytes into "utf8" at which the end of the characters occurs. A negative value indicates some kind of error. If "utf8" contains a zero byte, the return value is UNICODE_EMPTY_INPUT (-5). This may also return any of the error values of "utf8_to_ucs2".
+.Ss unicode_count_chars
+.Ft int32_t
+.Fo unicode_count_chars
+.Fa "const unsigned char * utf8"
+.Fc
+.Pp
+Given a nul-terminated string "utf8", return the total number of Unicode characters it contains.
+.Pp
+Return value
+.Pp
+If an error occurs, this may return UTF8_BAD_LEADING_BYTE (-1) or any of the errors of "utf8_to_ucs2".
+.Ss unicode_count_chars_fast
+.Ft int32_t
+.Fo unicode_count_chars_fast
+.Fa "const unsigned char * utf8"
+.Fc
+.Pp
+Like unicode_count_chars, but without error checks or validation of the input. This only checks the first byte of each UTF-8 sequence. It may return UTF8_BAD_LEADING_BYTE (-1) if the first byte is invalid.
+.Ss unicode_to_surrogates
+.Ft int32_t
+.Fo unicode_to_surrogates
+.Fa "unsigned unicode"
+.Fa "int32_t * hi_ptr"
+.Fa "int32_t * lo_ptr"
+.Fc
+.Pp
+This converts the Unicode code point in "unicode" into a surrogate pair, and returns the two parts in "* hi_ptr" and "* lo_ptr". 
+.Pp
+Return value:
+.Pp
+If "unicode" does not need to be a surrogate pair, the error UNICODE_NOT_SURROGATE_PAIR (-3) is returned, and the values of "*hi_ptr" and "*lo_ptr" are undefined. If the conversion is successful, UNICODE_OK (0) is returned.
+.Ss utf8_bytes
+.Ft int32_t
+.Fo utf8_bytes
+.Fa "unsigned char c"
+.Fc
+.Pp
+This function returns the number of bytes of UTF-8 a sequence starting with byte "c" will become, either 1 (c = 0000xxxx), 2 (c = 110xxxxx), 3 (c = 1110xxxx), or 4 (c = 111100xx or c = 11110100). If "c" is not a valid UTF-8 first byte, the value UTF8_BAD_LEADING_BYTE (-1) is returned.
+.Ss utf8_no_checks
+.Ft int32_t
+.Fo utf8_no_checks
+.Fa "const unsigned char * input"
+.Fa "const unsigned char ** end_ptr"
+.Fc
+.Pp
+Try to convert "input" from UTF-8 to UCS-2, and return a value even if the input is partly broken.  This checks the first byte of the input, but it doesn't check the subsequent bytes.
+.Ss utf8_to_ucs2
+.Ft int32_t
+.Fo utf8_to_ucs2
+.Fa "const unsigned char * input"
+.Fa "const unsigned char ** end_ptr"
+.Fc
+.Pp
+This function converts UTF-8 encoded bytes in "input" into the equivalent Unicode code point. The return value is the Unicode code point corresponding to the UTF-8 character in "input" if successful, and a negative number if not successful. "*end_ptr" is set to the next character after the read character on success. "*end_ptr" is set to the start of input on failure. "end_ptr" may not be null.
+.Pp
+If the first byte of "input" is zero, UNICODE_EMPTY_INPUT (-5) is returned. If the first byte of "input" is not valid UTF-8, UTF8_BAD_LEADING_BYTE (-1) is returned. If the second or later bytes of "input" are not valid UTF-8, UTF8_BAD_CONTINUATION_BYTE (-4) is returned. If the UTF-8 is not in the shortest possible form, the error UTF8_NON_SHORTEST (-6) is returned. If the value extrapolated from "input" is greater than UNICODE_MAXIMUM (0x10ffff), UNICODE_TOO_BIG (-7) is returned. If the value extrapolated from "input" ends in 0xFFFF or 0xFFFE, UNICODE_NOT_CHARACTER (-8) is returned.
+.Ss valid_utf8
+.Ft int32_t
+.Fo valid_utf8
+.Fa "const unsigned char * input"
+.Fa "int32_t input_length"
+.Fc
+.Pp
+Given "input" and "input_length", validate "input" byte by byte up to "input_length". The return value may be UTF8_VALID (1) or UTF8_INVALID (0).
+.Sh RETURN VALUE MACROS
+.Ss UNICODE_EMPTY_INPUT
+UNICODE_EMPTY_INPUT (-5)
+.Pp
+This return value indicates a zero byte was found in a string which was supposed to contain UTF-8 bytes. It is returned only by the functions which are documented as not allowing zero bytes.
+.Ss UNICODE_MAXIMUM
+UNICODE_MAXIMUM (0x10ffff)
+.Pp
+The maximum possible value of a Unicode code point. See http://www.cl.cam.ac.uk/~mgk25/unicode.html#ucs.
+.Ss UNICODE_NOT_CHARACTER
+UNICODE_NOT_CHARACTER (-8)
+.Pp
+This return value indicates that the Unicode code-point ended with either 0xFFFF or 0xFFFE, meaning it cannot be used as a character code point.
+.Ss UNICODE_NOT_SURROGATE_PAIR
+UNICODE_NOT_SURROGATE_PAIR (-3)
+.Pp
+This return value means that code points which did not form a surrogate pair were tried to be converted into a code point as if they were a surrogate pair.
+.Ss UNICODE_OK
+UNICODE_OK (0)
+.Pp
+This return value indicates the successful completion of a routine which doesn't use the return value to communicate data back to the caller.
+.Ss UNICODE_SURROGATE_PAIR
+UNICODE_SURROGATE_PAIR (-2)
+.Pp
+This return value means the caller attempted to turn a code point for a surrogate pair into UTF-8.
+.Ss UNICODE_TOO_BIG
+UNICODE_TOO_BIG (-7)
+.Pp
+This return value indicates that there was an attempt to convert a code point which was greater than UNICODE_MAXIMUM or UNICODE_UTF8_4 into UTF-8 bytes.
+.Ss UNICODE_UTF8_4
+UNICODE_UTF8_4 (0x1fffff)
+.Pp
+The maximum possible value which will fit into four bytes of UTF-8. This is larger than UNICODE_MAXIMUM.
+.Ss UTF8_BAD_CONTINUATION_BYTE
+UTF8_BAD_CONTINUATION_BYTE (-4)
+.Pp
+This return value means that input which was supposed to be UTF-8 encoded contained an invalid continuation byte. If the leading byte of a UTF-8 sequence is not valid, UTF8_BAD_LEADING_BYTE is returned instead of this.
+.Ss UTF8_BAD_LEADING_BYTE
+UTF8_BAD_LEADING_BYTE (-1)
+.Pp
+This return value means that the leading byte of a UTF-8 sequence was not valid.
+.Ss UTF8_INVALID
+UTF8_INVALID (0)
+.Pp
+This return value indicates that the UTF-8 is not valid.
+.Ss UTF8_MAX_LENGTH
+UTF8_MAX_LENGTH (5)
+.Pp
+The maximum number of bytes we need to contain any Unicode code point as UTF-8 as a C string. This length includes one trailing nul byte.
+.Ss UTF8_NON_SHORTEST
+UTF8_NON_SHORTEST (-6)
+.Pp
+This return value indicates that UTF-8 bytes were not in the shortest possible form. See http://www.cl.cam.ac.uk/~mgk25/unicode.html#utf-8.
+.Ss UTF8_VALID
+UTF8_VALID (1)
+.Pp
+This return value indicates that the UTF-8 is valid.
+.Sh SEE ALSO
+https://www.lemoda.net/tools/uniconvert/index.html
+.Pp
+https://github.com/benkasminbullock/unicode-c

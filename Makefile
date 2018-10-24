@@ -23,7 +23,6 @@ unicode-character-class.h:	unicode-character-class.c
 	$(CFUNCTIONS) unicode-character-class.c
 
 test:	unicode-test unicode-character-class-test
-	ccheck unicode.c
 	prove --nocolor ./unicode-test ./unicode-character-class-test
 
 unicode-test:	unicode.c unicode.h c-tap-test.h
