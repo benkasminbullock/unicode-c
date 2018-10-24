@@ -19,24 +19,10 @@ artistic licence.
 
 There is no version for this, please use the git commit numbers.
 
-* Installation:
-
-Building from scratch requires cfunctions:
-
-    https://github.com/benkasminbullock/cfunctions
-
-Alternatively, copy the header file from one of these Perl
-distributions:
-
-    https://metacpan.org/release/JSON-Create
-    https://metacpan.org/release/JSON-Parse
-
-The header file is under "Browse" then "unicode.h". I don't provide
-direct links here since these may be updated for different versions.
-
 * Documentation:
 
-Documentation consists of the comments in the source code. 
+Documentation consists of the comments in the source code, a manual
+page in doc/unicode.3, and an HTML version in doc/unicode.html.
 
 These comments can be converted into an mdoc-format manual page called
 "unicode.3", or an HTML page called "unicode.html" using scripts in
