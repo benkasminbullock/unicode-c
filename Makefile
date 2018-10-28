@@ -2,7 +2,10 @@ OBJS=unicode.o unicode-character-class.o
 CFLAGS=-g -Wall
 CFUNCTIONS=/home/ben/software/install/bin/cfunctions
 
-all:	libunicode.a unicode.h docinstall
+all:	libunicode.a unicode.h
+	cd doc;make
+
+install: all docinstall
 
 docinstall:	unicode.c
 	cd doc;make;cp -f unicode.3 /home/ben/software/install/man/man3/
@@ -44,10 +47,16 @@ c-tap-test.h: $(CTT)/$@
 
 clean:
 	-rm -f $(OBJS) \
+	c-tap-test.h \
 	libunicode.a \
-	unicode.h \
-	unicode-test \
 	unicode-character-class-test \
+	unicode-test \
+	ZZZZZ
+
+veryclean: clean
+	rm -f \
 	unicode-character-class.h \
-	c-tap-test.h
+	unicode.h \
+	ZZZZZ
+	cd doc;make clean
 

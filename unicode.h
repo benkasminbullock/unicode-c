@@ -115,14 +115,4 @@ int32_t trim_to_utf8_start (unsigned char** ptr);
 #line 632 "unicode.c"
 const char* code_to_error (int32_t code);
 
-#line 668 "unicode.c"
-
-#ifdef TEST
-void print_bytes (const unsigned char* bytes);
-
-#line 681 "unicode.c"
-void test_ucs2_to_utf8 ();
-
-#endif /* def TEST */
-
 #endif /* CFH_UNICODE_H */

@@ -815,20 +815,11 @@ code_to_error (int32_t code)
 #include <stdlib.h>
 #include "c-tap-test.h"
 
-void print_bytes (const unsigned char * bytes)
-{
-    int32_t i;
-    for (i = 0; i < strlen ((const char *) bytes); i++) {
-        fprintf (stderr, "%02X", bytes[i]);
-    }
-    fprintf (stderr, "\n");
-}
-
 static const unsigned char * utf8 = (unsigned char *) "漢数字ÔÕÖＸ";
 
 #define BUFFSIZE 0x100
 
-void test_ucs2_to_utf8 ()
+static void test_ucs2_to_utf8 ()
 {
     /* Buffer to print utf8 out into. */
     unsigned char buffer[BUFFSIZE];
