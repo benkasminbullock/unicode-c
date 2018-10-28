@@ -3,12 +3,13 @@ use warnings;
 use strict;
 use utf8;
 
-# All of these modules are available on CPAN 2018-10-25
+use FindBin '$Bin';
+
+# All of these modules are available on CPAN as of 2018-10-25
 
 use C::Tokenize ':all';
 use Convert::Moji 'make_regex';
 use File::Slurper qw/read_text write_text/;
-use FindBin '$Bin';
 use JSON::Create 'create_json';
 use List::UtilsBy 'sort_by';
 use Text::LineNumber;
@@ -50,7 +51,7 @@ my @functions;
 my $tln = Text::LineNumber->new($text);
 while ($text =~ /($trad_comment_re)?
 		 \s+
-		 ^(int|int32_t)
+		 ^(int32_t|const\s+char\s+\*)
 		 \s*
 		 ($word_re)
 		 \s*

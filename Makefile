@@ -47,7 +47,6 @@ c-tap-test.h: $(CTT)/$@
 
 clean:
 	-rm -f $(OBJS) \
-	c-tap-test.h \
 	libunicode.a \
 	unicode-character-class-test \
 	unicode-test \
@@ -55,6 +54,7 @@ clean:
 
 veryclean: clean
 	rm -f \
+	c-tap-test.h \
 	unicode-character-class.h \
 	unicode.h \
 	ZZZZZ

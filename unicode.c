@@ -146,7 +146,7 @@ const uint8_t utf8_sequence_len[0x100] =
    11110100). If "c" is not a valid UTF-8 first byte, the value
    UTF8_BAD_LEADING_BYTE is returned. */
 
-int32_t utf8_bytes (unsigned char c)
+int32_t utf8_bytes (uint8_t c)
 {
     int32_t r;
     r = utf8_sequence_len[c];
@@ -170,9 +170,9 @@ int32_t utf8_bytes (unsigned char c)
    input, but it doesn't check the subsequent bytes. */
 
 int32_t
-utf8_no_checks (const unsigned char * input, const unsigned char ** end_ptr)
+utf8_no_checks (const uint8_t * input, const uint8_t ** end_ptr)
 {
-    unsigned char c;
+    uint8_t c;
     c = input[0];
     switch (utf8_sequence_len[c]) {
     case 1:
@@ -221,9 +221,10 @@ utf8_no_checks (const unsigned char * input, const unsigned char ** end_ptr)
    returned. If the value extrapolated from "input" ends in 0xFFFF or
    0xFFFE, UNICODE_NOT_CHARACTER is returned. */
 
-int32_t utf8_to_ucs2 (const unsigned char * input, const unsigned char ** end_ptr)
+int32_t
+utf8_to_ucs2 (const uint8_t * input, const uint8_t ** end_ptr)
 {
-    unsigned char c;
+    uint8_t c;
     uint8_t l;
     *end_ptr = input;
     c = input[0];
@@ -268,10 +269,10 @@ int32_t utf8_to_ucs2 (const unsigned char * input, const unsigned char ** end_pt
     }
     if (l == 4) {
 	/* Four byte case. */
-	unsigned char d;
-	unsigned char e;
-	unsigned char f;
-	uint32_t v;
+	uint8_t d;
+	uint8_t e;
+	uint8_t f;
+	int32_t v;
 	d = input[1];
 	e = input[2];
 	f = input[3];
@@ -330,7 +331,8 @@ int32_t utf8_to_ucs2 (const unsigned char * input, const unsigned char ** end_pt
    buffer "utf8" has at least UNICODE_MAX_LENGTH (5) bytes of space to
    write to, without checking. */
 
-int32_t ucs2_to_utf8 (int32_t ucs2, unsigned char * utf8)
+int32_t
+ucs2_to_utf8 (int32_t ucs2, uint8_t * utf8)
 {
     if (ucs2 < 0x80) {
         utf8[0] = ucs2;
@@ -383,7 +385,7 @@ int32_t ucs2_to_utf8 (int32_t ucs2, unsigned char * utf8)
    UNICODE_OK is returned. */
 
 int32_t
-unicode_to_surrogates (unsigned unicode, int32_t * hi_ptr, int32_t * lo_ptr)
+unicode_to_surrogates (int32_t unicode, int32_t * hi_ptr, int32_t * lo_ptr)
 {
     int32_t hi = UNI_SUR_HIGH_START;
     int32_t lo = UNI_SUR_LOW_START;
@@ -410,7 +412,7 @@ unicode_to_surrogates (unsigned unicode, int32_t * hi_ptr, int32_t * lo_ptr)
 int32_t
 surrogates_to_unicode (int32_t hi, int32_t lo)
 {
-    uint32_t u;
+    int32_t u;
     if (hi < UNI_SUR_HIGH_START || hi > UNI_SUR_HIGH_END ||
 	lo < UNI_SUR_LOW_START || lo > UNI_SUR_LOW_END) {
 	return UNICODE_NOT_SURROGATE_PAIR;
@@ -429,11 +431,12 @@ surrogates_to_unicode (int32_t hi, int32_t lo)
 #undef LOW_TEN_BITS
 
 /* Convert the surrogate pair in "hi" and "lo" to UTF-8 in
-   "utf8". This calls surrogates_to_unicode and ucs2_to_utf8, thus it
-   can return the same errors as them, and has the same restriction on
-   "utf8" as ucs2_to_utf8. */
+   "utf8". This calls "surrogates_to_unicode" and "ucs2_to_utf8", thus
+   it can return the same errors as them, and has the same restriction
+   on "utf8" as "ucs2_to_utf8". */
 
-int32_t surrogate_to_utf8 (int32_t hi, int32_t lo, unsigned char * utf8)
+int32_t
+surrogate_to_utf8 (int32_t hi, int32_t lo, uint8_t * utf8)
 {
     int32_t C;
     C = surrogates_to_unicode (hi, lo);
@@ -451,10 +454,10 @@ int32_t surrogate_to_utf8 (int32_t hi, int32_t lo, unsigned char * utf8)
    values of "utf8_to_ucs2". */
 
 int32_t
-unicode_chars_to_bytes (const unsigned char * utf8, int32_t n_chars)
+unicode_chars_to_bytes (const uint8_t * utf8, int32_t n_chars)
 {
     int32_t i;
-    const unsigned char * p = utf8;
+    const uint8_t * p = utf8;
     int32_t len = strlen ((const char *) utf8);
     if (len == 0 && n_chars != 0) {
 	return UNICODE_EMPTY_INPUT;
@@ -473,10 +476,11 @@ unicode_chars_to_bytes (const unsigned char * utf8, int32_t n_chars)
    sequence. It may return UTF8_BAD_LEADING_BYTE if the first byte is
    invalid. */
 
-int32_t unicode_count_chars_fast (const unsigned char * utf8)
+int32_t
+unicode_count_chars_fast (const uint8_t * utf8)
 {
     int32_t chars;
-    const unsigned char * p;
+    const uint8_t * p;
     chars = 0;
     p = utf8;
     while (*p) {
@@ -501,10 +505,11 @@ int32_t unicode_count_chars_fast (const unsigned char * utf8)
    If an error occurs, this may return UTF8_BAD_LEADING_BYTE or any of the
    errors of "utf8_to_ucs2". */
 
-int32_t unicode_count_chars (const unsigned char * utf8)
+int32_t
+unicode_count_chars (const uint8_t * utf8)
 {
     int32_t chars = 0;
-    const unsigned char * p = utf8;
+    const uint8_t * p = utf8;
     int32_t len = strlen ((const char *) utf8);
     if (len == 0) {
         return 0;
@@ -597,10 +602,10 @@ int32_t unicode_count_chars (const unsigned char * utf8)
    UTF8_INVALID. */
 
 int32_t
-valid_utf8 (const unsigned char * input, int32_t input_length)
+valid_utf8 (const uint8_t * input, int32_t input_length)
 {
     int32_t i;
-    unsigned char c;
+    uint8_t c;
 
     i = 0;
 
@@ -752,10 +757,10 @@ valid_utf8 (const unsigned char * input, int32_t input_length)
    invalid UTF-8 bytes such as 0xFE and 0xFF. */
 
 int32_t
-trim_to_utf8_start (unsigned char ** ptr)
+trim_to_utf8_start (uint8_t ** ptr)
 {
-    unsigned char * p = *ptr;
-    unsigned char c;
+    uint8_t * p = *ptr;
+    uint8_t c;
     int32_t i;
     /* 0xC0 = 1100_0000. */
     c = *p & 0xC0;
@@ -772,8 +777,13 @@ trim_to_utf8_start (unsigned char ** ptr)
     return UTF8_BAD_CONTINUATION_BYTE;
 }
 
+/* Given a return value "code" which is negative or zero, return a
+   string which describes what the return value means. Positive
+   non-zero return values never indicate errors or statuses in this
+   library. */
+
 const char *
-code_to_error (int32_t code)
+unicode_code_to_error (int32_t code)
 {
     switch (code) {
     case UTF8_BAD_LEADING_BYTE:
@@ -815,23 +825,23 @@ code_to_error (int32_t code)
 #include <stdlib.h>
 #include "c-tap-test.h"
 
-static const unsigned char * utf8 = (unsigned char *) "漢数字ÔÕÖＸ";
+static const uint8_t * utf8 = (uint8_t *) "漢数字ÔÕÖＸ";
 
 #define BUFFSIZE 0x100
 
 static void test_ucs2_to_utf8 ()
 {
     /* Buffer to print utf8 out into. */
-    unsigned char buffer[BUFFSIZE];
+    uint8_t buffer[BUFFSIZE];
     /* Offset into buffer. */
-    unsigned char * offset;
-    const unsigned char * start = utf8;
+    uint8_t * offset;
+    const uint8_t * start = utf8;
 
     offset = buffer;
     while (1) {
         int32_t unicode;
         int32_t bytes;
-        const unsigned char * end;
+        const uint8_t * end;
         unicode = utf8_to_ucs2 (start, & end);
         if (unicode == UNICODE_EMPTY_INPUT) {
             break;
@@ -839,7 +849,7 @@ static void test_ucs2_to_utf8 ()
 	if (unicode < 0) {
 	    fprintf (stderr,
 		     "%s:%d: unexpected error %s converting unicode.\n",
-		     __FILE__, __LINE__, code_to_error (unicode));
+		     __FILE__, __LINE__, unicode_code_to_error (unicode));
 	    // exit ok in test
 	    exit (EXIT_FAILURE);
 	}
@@ -866,10 +876,10 @@ static void test_ucs2_to_utf8 ()
 static void
 test_invalid_utf8 ()
 {
-    unsigned char invalid_utf8[UTF8_MAX_LENGTH];
+    uint8_t invalid_utf8[UTF8_MAX_LENGTH];
     int32_t unicode;
     int32_t valid;
-    const unsigned char * end;
+    const uint8_t * end;
     snprintf ((char *) invalid_utf8, UTF8_MAX_LENGTH - 1,
 	      "%c%c%c", 0xe8, 0xe4, 0xe5);
     unicode = utf8_to_ucs2 (invalid_utf8, & end);
@@ -888,17 +898,17 @@ test_surrogate_pairs ()
     int32_t rt;
     /* This is the wide character space, which does not require
        representation as a surrogate pair. */
-    unsigned nogood = 0x3000;
+    int32_t nogood = 0x3000;
     /* 
        Two examples from the Wikipedia article on UTF-16
        https://en.wikipedia.org/w/index.php?title=UTF-16&oldid=744329865#Examples. */
-    unsigned wikipedia_1 = 0x10437;
-    unsigned wikipedia_2 = 0x24b62;
+    int32_t wikipedia_1 = 0x10437;
+    int32_t wikipedia_2 = 0x24b62;
     /*
       An example from the JSON RFC
       http://rfc7159.net/rfc7159#rfc.section.7
     */
-    unsigned json_spec = 0x1D11E;
+    int32_t json_spec = 0x1D11E;
 
     status = unicode_to_surrogates (nogood, & hi, & lo);
 
@@ -930,7 +940,11 @@ test_surrogate_pairs ()
 		  rt, json_spec);
 }
 
-static void test_utf8_bytes ()
+/* Test sending various bytes into "utf8_bytes" and seeing whether the
+   return value is what we expected. */
+
+static void
+test_utf8_bytes ()
 {
     struct tub {
 	int32_t first;
@@ -954,19 +968,23 @@ static void test_utf8_bytes ()
     }
 }
 
+/* Test the conversion from utf-8 to ucs-2 (UTF-16). */
+
 static void
 test_utf8_to_ucs2 ()
 {
-    const unsigned char * start = utf8;
+    const uint8_t * start = utf8;
     while (*start) {
         int32_t unicode;
-        const unsigned char * end;
+        const uint8_t * end;
         unicode = utf8_to_ucs2 (start, & end);
 	TAP_TEST_MSG (unicode > 0, "no bad value at %s", start);
         printf ("# %s is %04X, length is %d\n", start, unicode, end - start);
         start = end;
     }
 }
+
+/* Test counting of unicode characters. */
 
 static void
 test_unicode_count_chars ()
@@ -990,12 +1008,12 @@ static void
 test_trim_to_utf8_start ()
 {
     int32_t status;
-    unsigned char * p;
+    uint8_t * p;
     /* Invalid UTF-8. */
-    unsigned char bad[] = {0x99, 0x99, 0x99, 0x99, 0x99, 0x99};
+    uint8_t bad[] = {0x99, 0x99, 0x99, 0x99, 0x99, 0x99};
     /* Valid UTF-8. */
-    unsigned char good[] = "化苦";
-    unsigned char good2[] = "化abc";
+    uint8_t good[] = "化苦";
+    uint8_t good2[] = "化abc";
     p = bad;
     status = trim_to_utf8_start (& p);
     TAP_TEST_MSG (status == UTF8_BAD_CONTINUATION_BYTE,

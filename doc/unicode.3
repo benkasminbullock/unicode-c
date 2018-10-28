@@ -1,4 +1,4 @@
-.Dd Sun Oct 28 01:12:48 2018
+.Dd Sun Oct 28 02:06:23 2018
 .Dt UNICODE 3
 .Sh NAME
 .Nm surrogate_to_utf8
@@ -6,6 +6,7 @@
 .Nm trim_to_utf8_start
 .Nm ucs2_to_utf8
 .Nm unicode_chars_to_bytes
+.Nm unicode_code_to_error
 .Nm unicode_count_chars
 .Nm unicode_count_chars_fast
 .Nm unicode_to_surrogates
@@ -25,10 +26,10 @@
 .Fo surrogate_to_utf8
 .Fa "int32_t hi"
 .Fa "int32_t lo"
-.Fa "unsigned char * utf8"
+.Fa "uint8_t * utf8"
 .Fc
 .Pp
-Convert the surrogate pair in "hi" and "lo" to UTF-8 in "utf8". This calls surrogates_to_unicode and ucs2_to_utf8, thus it can return the same errors as them, and has the same restriction on "utf8" as ucs2_to_utf8.
+Convert the surrogate pair in "hi" and "lo" to UTF-8 in "utf8". This calls "surrogates_to_unicode" and "ucs2_to_utf8", thus it can return the same errors as them, and has the same restriction on "utf8" as "ucs2_to_utf8".
 .Ss surrogates_to_unicode
 .Ft int32_t
 .Fo surrogates_to_unicode
@@ -42,7 +43,7 @@ https://android.googlesource.com/platform/external/id3lib/+/master/unicode.org/C
 .Ss trim_to_utf8_start
 .Ft int32_t
 .Fo trim_to_utf8_start
-.Fa "unsigned char ** ptr"
+.Fa "uint8_t ** ptr"
 .Fc
 .Pp
 Make "* ptr" point to the start of the first UTF-8 character after its initial value. This assumes that there are at least four bytes which can be read, and that "* ptr" points to valid UTF-8. 
@@ -52,7 +53,7 @@ If "** ptr" does not have its top bit set, 00xx_xxxx, this does not change the v
 .Ft int32_t
 .Fo ucs2_to_utf8
 .Fa "int32_t ucs2"
-.Fa "unsigned char * utf8"
+.Fa "uint8_t * utf8"
 .Fc
 .Pp
 Input: a Unicode code point, "ucs2". 
@@ -65,15 +66,22 @@ This adds a zero byte to the end of the string. It assumes that the buffer "utf8
 .Ss unicode_chars_to_bytes
 .Ft int32_t
 .Fo unicode_chars_to_bytes
-.Fa "const unsigned char * utf8"
+.Fa "const uint8_t * utf8"
 .Fa "int32_t n_chars"
 .Fc
 .Pp
 Given a nul-terminated string "utf8" and a number of Unicode characters "n_chars", return the number of bytes into "utf8" at which the end of the characters occurs. A negative value indicates some kind of error. If "utf8" contains a zero byte, the return value is UNICODE_EMPTY_INPUT (-5). This may also return any of the error values of "utf8_to_ucs2".
+.Ss unicode_code_to_error
+.Ft const char *
+.Fo unicode_code_to_error
+.Fa "int32_t code"
+.Fc
+.Pp
+Given a return value "code" which is negative or zero, return a string which describes what the return value means. Positive non-zero return values never indicate errors or statuses in this library.
 .Ss unicode_count_chars
 .Ft int32_t
 .Fo unicode_count_chars
-.Fa "const unsigned char * utf8"
+.Fa "const uint8_t * utf8"
 .Fc
 .Pp
 Given a nul-terminated string "utf8", return the total number of Unicode characters it contains.
@@ -84,14 +92,14 @@ If an error occurs, this may return UTF8_BAD_LEADING_BYTE (-1) or any of the err
 .Ss unicode_count_chars_fast
 .Ft int32_t
 .Fo unicode_count_chars_fast
-.Fa "const unsigned char * utf8"
+.Fa "const uint8_t * utf8"
 .Fc
 .Pp
 Like unicode_count_chars, but without error checks or validation of the input. This only checks the first byte of each UTF-8 sequence. It may return UTF8_BAD_LEADING_BYTE (-1) if the first byte is invalid.
 .Ss unicode_to_surrogates
 .Ft int32_t
 .Fo unicode_to_surrogates
-.Fa "unsigned unicode"
+.Fa "int32_t unicode"
 .Fa "int32_t * hi_ptr"
 .Fa "int32_t * lo_ptr"
 .Fc
@@ -104,23 +112,23 @@ If "unicode" does not need to be a surrogate pair, the error UNICODE_NOT_SURROGA
 .Ss utf8_bytes
 .Ft int32_t
 .Fo utf8_bytes
-.Fa "unsigned char c"
+.Fa "uint8_t c"
 .Fc
 .Pp
 This function returns the number of bytes of UTF-8 a sequence starting with byte "c" will become, either 1 (c = 0000xxxx), 2 (c = 110xxxxx), 3 (c = 1110xxxx), or 4 (c = 111100xx or c = 11110100). If "c" is not a valid UTF-8 first byte, the value UTF8_BAD_LEADING_BYTE (-1) is returned.
 .Ss utf8_no_checks
 .Ft int32_t
 .Fo utf8_no_checks
-.Fa "const unsigned char * input"
-.Fa "const unsigned char ** end_ptr"
+.Fa "const uint8_t * input"
+.Fa "const uint8_t ** end_ptr"
 .Fc
 .Pp
 Try to convert "input" from UTF-8 to UCS-2, and return a value even if the input is partly broken.  This checks the first byte of the input, but it doesn't check the subsequent bytes.
 .Ss utf8_to_ucs2
 .Ft int32_t
 .Fo utf8_to_ucs2
-.Fa "const unsigned char * input"
-.Fa "const unsigned char ** end_ptr"
+.Fa "const uint8_t * input"
+.Fa "const uint8_t ** end_ptr"
 .Fc
 .Pp
 This function converts UTF-8 encoded bytes in "input" into the equivalent Unicode code point. The return value is the Unicode code point corresponding to the UTF-8 character in "input" if successful, and a negative number if not successful. "*end_ptr" is set to the next character after the read character on success. "*end_ptr" is set to the start of input on failure. "end_ptr" may not be null.
@@ -129,7 +137,7 @@ If the first byte of "input" is zero, UNICODE_EMPTY_INPUT (-5) is returned. If t
 .Ss valid_utf8
 .Ft int32_t
 .Fo valid_utf8
-.Fa "const unsigned char * input"
+.Fa "const uint8_t * input"
 .Fa "int32_t input_length"
 .Fc
 .Pp

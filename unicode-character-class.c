@@ -8,7 +8,7 @@
 /* Return a true or false value depending on whether ucs is in the
    range of kana. */
 
-int ucs2_is_kana (int ucs)
+int32_t ucs2_is_kana (int32_t ucs)
 {
     if (ucs >= 0x3000 && ucs <= 0x3100) {
         return 1;
@@ -18,9 +18,9 @@ int ucs2_is_kana (int ucs)
 
 /* Are all the characters in "utf8" kana characters? */
 
-int utf8_is_kana_chars (const unsigned char * utf8, int len)
+int32_t utf8_is_kana_chars (const uint8_t * utf8, int32_t len)
 {
-    const unsigned char * p;
+    const uint8_t * p;
     if (len == 0) {
         len = strlen ((const char *) utf8);
     }
@@ -39,7 +39,7 @@ int utf8_is_kana_chars (const unsigned char * utf8, int len)
     return 1;
 }
 
-int utf16_is_kanji (int utf16)
+int32_t utf16_is_kanji (int32_t utf16)
 {
     if (utf16 < 0x4e00 || utf16 > 0x9fff) {
 	return 0;
@@ -69,8 +69,8 @@ int main ()
     char * test[] = {"ひらがなカタカナスゲー",
 		     "かな This is not all kana ",
 		     "漢字"};
-    for (i = 0; i < sizeof (test) / sizeof (unsigned char *); i++) {
-	OK (utf8_is_kana_chars ((unsigned char *) test[i], 0) == expect[i],
+    for (i = 0; i < sizeof (test) / sizeof (uint8_t *); i++) {
+	OK (utf8_is_kana_chars ((const uint8_t *) test[i], 0) == expect[i],
 	    counter, "%s %d", test[i], expect[i]);
     }
     OK (utf16_is_kanji (0x6050), counter, "OK");
