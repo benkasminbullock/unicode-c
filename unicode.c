@@ -159,11 +159,11 @@ int32_t utf8_bytes (uint8_t c)
 /* This macro converts four bytes of UTF-8 into the corresponding code
    point. */
 
-#define FOUR(x)					\
-    (((x[0] & 0x07) << 18)			\
-     | ((x[1] & 0x3F) << 12)			\
-     | ((x[2] & 0x3F) <<  6)			\
-     | ((x[3] & 0x3F)))
+#define FOUR(x)							\
+      (((int32_t) (x[0] & 0x07)) << 18)				\
+    | (((int32_t) (x[1] & 0x3F)) << 12)				\
+    | (((int32_t) (x[2] & 0x3F)) <<  6)				\
+    | (((int32_t) (x[3] & 0x3F)))
 
 /* Try to convert "input" from UTF-8 to UCS-2, and return a value even
    if the input is partly broken.  This checks the first byte of the
@@ -246,8 +246,8 @@ utf8_to_ucs2 (const uint8_t * input, const uint8_t ** end_ptr)
 	}
         * end_ptr = input + 2;
         return
-            (c & 0x1F) << 6  |
-            (input[1] & 0x3F);
+            ((int32_t) (c & 0x1F) << 6)  |
+            ((int32_t) (input[1] & 0x3F));
     }
     if (l == 3) {
 	/* Three byte case. */
@@ -263,9 +263,9 @@ utf8_to_ucs2 (const uint8_t * input, const uint8_t ** end_ptr)
 	}
         * end_ptr = input + 3;
         return
-            (c & 0x0F) << 12 |
-            (input[1] & 0x3F) << 6  |
-            (input[2] & 0x3F);
+            ((int32_t) (c & 0x0F)) << 12 |
+            ((int32_t) (input[1] & 0x3F)) << 6  |
+            ((int32_t) (input[2] & 0x3F));
     }
     if (l == 4) {
 	/* Four byte case. */
