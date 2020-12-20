@@ -1,9 +1,9 @@
-This is a Unicode library in the programming language C which deals
-with conversions to and from the UTF-8 format. 
+This is a Unicode library in the C programming language which deals
+with conversions to and from the UTF-8 format.
 
 * Author: 
 
-Ben Bullock <benkasminbullock@gmail.com>, <bkb@cpan.org>
+    Ben Bullock <benkasminbullock@gmail.com>, <bkb@cpan.org>
 
 * Repository: 
 
@@ -24,10 +24,14 @@ There is no version for this, please use the git commit numbers.
 Documentation consists of the comments in the source code, a manual
 page in doc/unicode.3, and an HTML version in doc/unicode.html.
 
-These comments can be converted into an mdoc-format manual page called
-"unicode.3", or an HTML page called "unicode.html" using scripts in
-the "doc" subdirectory of the repository. Running these scripts may
-require you to install some Perl modules from CPAN.
+The mdoc manual page unicode.3 and the html page doc/unicode.html are
+both generated from the comments using Perl scripts in the "doc"
+subdirectory of the repository. Running these scripts may require you
+to install some Perl modules from CPAN. The following command will
+download and install all the necessary modules:
+
+    curl -L https://cpanmin.us | perl - App::cpanminus
+    cpanm C::Tokenize Convert::Moji File::Slurper HTML::Make JSON::Create JSON::Parse List::UtilsBy Template Text::LineNumber
 
 * Conventions
 
