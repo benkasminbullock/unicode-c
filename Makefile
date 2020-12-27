@@ -1,5 +1,5 @@
 OBJS=unicode.o unicode-character-class.o
-CFLAGS=-g -Wall
+CFLAGS=-g -Wall -O
 CFUNCTIONS=/home/ben/software/install/bin/cfunctions
 
 all:	libunicode.a unicode.h
@@ -29,7 +29,7 @@ test:	unicode-test unicode-character-class-test
 	prove --nocolor ./unicode-test ./unicode-character-class-test
 
 unicode-test:	unicode.c unicode.h c-tap-test.h
-	cc -g -Wall -DTEST unicode.c -o unicode-test
+	$(CC) $(CFLAGS) -DTEST unicode.c -o unicode-test
 
 unicode-character-class-test:	unicode-character-class.c unicode.o unicode-character-class.h unicode.h
 	$(CC) $(CFLAGS) -o $@ -D TEST unicode-character-class.c unicode.o
