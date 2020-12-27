@@ -165,15 +165,21 @@ int32_t utf8_bytes (uint8_t c)
     | (((int32_t) (x[2] & 0x3F)) <<  6)				\
     | (((int32_t) (x[3] & 0x3F)))
 
+/* Reject code points which end in either FFFE or FFFF. */
+
 #define REJECT_FFFF(x)				\
     if ((x & 0xFFFF) >= 0xFFFE) {		\
 	return UNICODE_NOT_CHARACTER;		\
     }
 
+/* Reject code points in a certain range. */
+
 #define REJECT_NOT_CHAR(r)					\
     if (r >= UNI_NOT_CHAR_MIN && r <= UNI_NOT_CHAR_MAX) {	\
 	return UNICODE_NOT_CHARACTER;				\
     }
+
+/* Reject surrogates. */
 
 #define REJECT_SURROGATE(ucs2)						\
     if (ucs2 >= UNI_SUR_HIGH_START && ucs2 <= UNI_SUR_LOW_END) {	\
@@ -610,6 +616,16 @@ unicode_count_chars (const uint8_t * utf8)
  case 0xB1: case 0xB2: case 0xB3: case 0xB4: case 0xB5: case 0xB6: case 0xB7: \
  case 0xB8: case 0xB9: case 0xBA: case 0xBB: case 0xBC: case 0xBD: case 0xBE: \
  case 0xBF
+#define BYTE_80_BD							\
+    0x80: case 0x81: case 0x82: case 0x83: case 0x84: case 0x85: case 0x86: \
+ case 0x87: case 0x88: case 0x89: case 0x8A: case 0x8B: case 0x8C: case 0x8D: \
+ case 0x8E: case 0x8F: case 0x90: case 0x91: case 0x92: case 0x93: case 0x94: \
+ case 0x95: case 0x96: case 0x97: case 0x98: case 0x99: case 0x9A: case 0x9B: \
+ case 0x9C: case 0x9D: case 0x9E: case 0x9F: case 0xA0: case 0xA1: case 0xA2: \
+ case 0xA3: case 0xA4: case 0xA5: case 0xA6: case 0xA7: case 0xA8: case 0xA9: \
+ case 0xAA: case 0xAB: case 0xAC: case 0xAD: case 0xAE: case 0xAF: case 0xB0: \
+ case 0xB1: case 0xB2: case 0xB3: case 0xB4: case 0xB5: case 0xB6: case 0xB7: \
+ case 0xB8: case 0xB9: case 0xBA: case 0xBB: case 0xBC: case 0xBD
 #define BYTE_90_BF							\
     0x90: case 0x91: case 0x92: case 0x93: case 0x94: case 0x95: case 0x96: \
  case 0x97: case 0x98: case 0x99: case 0x9A: case 0x9B: case 0x9C: case 0x9D: \
@@ -659,19 +675,22 @@ valid_utf8 (const uint8_t * input, int32_t input_length)
 
  string_start:
 
-    i++;
-    if (i >= input_length) {
+    if (i >= input_length) {	
 	return UTF8_VALID;
     }
+
     /* Set c separately here since we use a range comparison before
        the switch statement. */
     c = input[i];
 
-    /* Admit all bytes <= 0x80. */
-    if (c <= 0x80) {
+    if (c == 0) {
+	return UTF8_INVALID;
+    }
+    /* Admit all bytes < 0x80. */
+    if (c < 0x80) {
+	i++;
 	goto string_start;
     }
-
     switch (c) {
     case BYTE_C2_DF:
 	UNICODEADDBYTE;
@@ -689,9 +708,13 @@ valid_utf8 (const uint8_t * input, int32_t input_length)
 	UNICODEADDBYTE;
 	goto byte23_80_9f;
 	    
-    case BYTE_EE_EF:
+    case 0xEE:
 	UNICODEADDBYTE;
 	goto byte_penultimate_80_bf;
+	    
+    case 0xEF:
+	UNICODEADDBYTE;
+	goto byte_ef_80_bf;
 	    
     case 0xF0:
 	UNICODEADDBYTE;
@@ -705,6 +728,8 @@ valid_utf8 (const uint8_t * input, int32_t input_length)
 	UNICODEADDBYTE;
 	goto byte24_80_8f;
 
+    default:
+	return UTF8_INVALID;
     }
 
  byte_last_80_bf:
@@ -718,6 +743,17 @@ valid_utf8 (const uint8_t * input, int32_t input_length)
 	UNICODEFAILUTF8 (XBYTES_80_BF);
     }
 
+ byte_last_80_bd:
+
+    switch (UNICODENEXTBYTE) {
+
+    case BYTE_80_BD:
+	UNICODEADDBYTE;
+	goto string_start;
+    default:
+	UNICODEFAILUTF8 (XBYTES_80_BD);
+    }
+
  byte_penultimate_80_bf:
 
     switch (UNICODENEXTBYTE) {
@@ -725,6 +761,17 @@ valid_utf8 (const uint8_t * input, int32_t input_length)
     case BYTE_80_BF:
 	UNICODEADDBYTE;
 	goto byte_last_80_bf;
+    default:
+	UNICODEFAILUTF8 (XBYTES_80_BF);
+    }
+
+ byte_ef_80_bf:
+
+    switch (UNICODENEXTBYTE) {
+
+    case BYTE_80_BF:
+	UNICODEADDBYTE;
+	goto byte_last_80_bd;
     default:
 	UNICODEFAILUTF8 (XBYTES_80_BF);
     }
@@ -768,7 +815,7 @@ valid_utf8 (const uint8_t * input, int32_t input_length)
 
     case BYTE_80_BF:
 	UNICODEADDBYTE;
-	goto byte_penultimate_80_bf;
+	goto byte_ef_80_bf;
     default:
 	UNICODEFAILUTF8 (XBYTES_80_BF);
     }
@@ -779,7 +826,7 @@ valid_utf8 (const uint8_t * input, int32_t input_length)
 
     case BYTE_80_8F:
 	UNICODEADDBYTE;
-	goto byte_penultimate_80_bf;
+	goto byte_ef_80_bf;
     default:
 	UNICODEFAILUTF8 (XBYTES_80_8F);
     }
