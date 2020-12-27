@@ -111,7 +111,7 @@ my %doc = (
     macros => \@macros,
     date => scalar (gmtime ((stat ($in))[9])),
 );
-my $json = create_json (\%doc);
+my $json = create_json (\%doc, sort => 1, indent => 1);
 #print "$json\n";
 if (-f $outfile) {
     chmod 0644, $outfile or die $!;

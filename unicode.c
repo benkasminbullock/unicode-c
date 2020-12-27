@@ -979,7 +979,8 @@ test_utf8_to_ucs2 ()
         const uint8_t * end;
         unicode = utf8_to_ucs2 (start, & end);
 	TAP_TEST_MSG (unicode > 0, "no bad value at %s", start);
-        printf ("# %s is %04X, length is %d\n", start, unicode, end - start);
+        printf ("# %s is %04X, length is %ld\n",
+		start, unicode, end - start);
         start = end;
     }
 }
