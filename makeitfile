@@ -1,0 +1,42 @@
+# Local makefile run by build.pl
+
+CFUNCTIONS=/home/ben/software/install/bin/cfunctions
+
+# Obtain the file "c-tap-test.h" from 
+#
+# https://www.lemoda.net/c/simple-tap-test/index.html
+
+CTT=/home/ben/projects/c-tap-test
+
+all: c-tap-test.h unicode.h unicode-character-class.h
+	make -f Makefile
+
+test:
+	make -f Makefile test
+
+c-tap-test.h: $(CTT)/$@
+	if [ -f $@ ]; then chmod 0644 $@; fi
+	cp $(CTT)/$@ $@
+	chmod 0444 $@
+
+unicode.h:	unicode.c
+	$(CFUNCTIONS) unicode.c
+
+unicode-character-class.h:	unicode-character-class.c
+	$(CFUNCTIONS) unicode-character-class.c
+
+
+veryclean:
+	rm -f \
+	c-tap-test.h \
+	unicode-character-class.h \
+	unicode.h \
+	ZZZZZ
+	cd doc;make clean
+
+clean:
+	make -f Makefile clean
+
+# Local variables:
+# mode: makefile
+# End:
