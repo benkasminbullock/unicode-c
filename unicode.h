@@ -32,31 +32,31 @@ int32_t utf8_bytes (uint8_t c);
 #line 124 "unicode.c"
 int32_t utf8_no_checks (const uint8_t* input, const uint8_t** end_ptr);
 
-#line 160 "unicode.c"
+#line 165 "unicode.c"
 int32_t utf8_to_ucs2 (const uint8_t* input, const uint8_t** end_ptr);
 
-#line 250 "unicode.c"
+#line 259 "unicode.c"
 int32_t ucs2_to_utf8 (int32_t ucs2, uint8_t* utf8);
 
-#line 295 "unicode.c"
+#line 304 "unicode.c"
 int32_t unicode_to_surrogates (int32_t unicode, int32_t* hi_ptr, int32_t* lo_ptr);
 
-#line 314 "unicode.c"
+#line 323 "unicode.c"
 int32_t surrogates_to_unicode (int32_t hi, int32_t lo);
 
-#line 337 "unicode.c"
+#line 346 "unicode.c"
 int32_t surrogate_to_utf8 (int32_t hi, int32_t lo, uint8_t* utf8);
 
-#line 350 "unicode.c"
+#line 359 "unicode.c"
 int32_t unicode_chars_to_bytes (const uint8_t* utf8, int32_t n_chars);
 
-#line 370 "unicode.c"
+#line 379 "unicode.c"
 int32_t unicode_count_chars_fast (const uint8_t* utf8);
 
-#line 392 "unicode.c"
+#line 401 "unicode.c"
 int32_t unicode_count_chars (const uint8_t* utf8);
 
-#line 415 "unicode.c"
+#line 424 "unicode.c"
 #define BYTE_80_8F							\
     0x80: case 0x81: case 0x82: case 0x83: case 0x84: case 0x85: case 0x86: \
  case 0x87: case 0x88: case 0x89: case 0x8A: case 0x8B: case 0x8C: case 0x8D: \
@@ -106,13 +106,13 @@ int32_t unicode_count_chars (const uint8_t* utf8);
 #define BYTE_F1_F3				\
     0xF1: case 0xF2: case 0xF3
 
-#line 479 "unicode.c"
+#line 488 "unicode.c"
 int32_t valid_utf8 (const uint8_t* input, int32_t input_length);
 
-#line 616 "unicode.c"
+#line 625 "unicode.c"
 int32_t trim_to_utf8_start (uint8_t** ptr);
 
-#line 639 "unicode.c"
+#line 648 "unicode.c"
 const char* unicode_code_to_error (int32_t code);
 
 #endif /* CFH_UNICODE_H */

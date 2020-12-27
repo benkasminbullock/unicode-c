@@ -1,4 +1,4 @@
-.Dd Sun Dec 27 10:39:10 2020
+.Dd Sun Dec 27 13:41:48 2020
 .Dt UNICODE 3
 .Sh NAME
 .Nm surrogate_to_utf8
@@ -133,7 +133,7 @@ Try to convert "input" from UTF-8 to UCS-2, and return a value even if the input
 .Pp
 This function converts UTF-8 encoded bytes in "input" into the equivalent Unicode code point. The return value is the Unicode code point corresponding to the UTF-8 character in "input" if successful, and a negative number if not successful. "*end_ptr" is set to the next character after the read character on success. "*end_ptr" is set to the start of input on failure. "end_ptr" may not be null.
 .Pp
-If the first byte of "input" is zero, UNICODE_EMPTY_INPUT (-5) is returned. If the first byte of "input" is not valid UTF-8, UTF8_BAD_LEADING_BYTE (-1) is returned. If the second or later bytes of "input" are not valid UTF-8, UTF8_BAD_CONTINUATION_BYTE (-4) is returned. If the UTF-8 is not in the shortest possible form, the error UTF8_NON_SHORTEST (-6) is returned. If the value extrapolated from "input" is greater than UNICODE_MAXIMUM (0x10ffff), UNICODE_TOO_BIG (-7) is returned. If the value extrapolated from "input" ends in 0xFFFF or 0xFFFE, UNICODE_NOT_CHARACTER (-8) is returned.
+If the first byte of "input" is zero, UNICODE_EMPTY_INPUT (-5) is returned. If the first byte of "input" is not valid UTF-8, UTF8_BAD_LEADING_BYTE (-1) is returned. If the second or later bytes of "input" are not valid UTF-8, UTF8_BAD_CONTINUATION_BYTE (-4) is returned. If the UTF-8 is not in the shortest possible form, the error UTF8_NON_SHORTEST (-6) is returned. If the value extrapolated from "input" is greater than UNICODE_MAXIMUM (0x10ffff), UNICODE_TOO_BIG (-7) is returned. If the value extrapolated from "input" ends in 0xFFFF or 0xFFFE, UNICODE_NOT_CHARACTER (-8) is returned. If the value is within the range of surrogate pairs, the error UNICODE_SURROGATE_PAIR (-2) is returned.
 .Ss valid_utf8
 .Ft int32_t
 .Fo valid_utf8

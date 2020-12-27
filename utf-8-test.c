@@ -42,7 +42,8 @@ utf_8_test_2 ()
 
     utf8_to_ucs2_expect (kuhn_2_2_1, expect_2_2_1);
     utf8_to_ucs2_expect (kuhn_2_2_2, expect_2_2_2);
-    utf8_to_ucs2_expect (kuhn_2_2_3, expect_2_2_3);
+    /* Something ending in FFFF is not valid. */
+    utf8_to_ucs2_expect (kuhn_2_2_3, UNICODE_NOT_CHARACTER);
     /* For input, we only go up to UNICODE_MAXIMUM, so the leading
        bytes in the following three tests can't occur in what we allow
        for. */
@@ -71,8 +72,9 @@ allbadfirst (const char * in, int len)
     }
 }
 
+
 static void
-utf_8_test_3 ()
+utf_8_test_3_1 ()
 {
     /* All of these are just bad leading bytes stuck together. */
 
@@ -84,7 +86,119 @@ utf_8_test_3 ()
     allbadfirst (kuhn_3_1_6, 5);
     allbadfirst (kuhn_3_1_7, 6);
     allbadfirst (kuhn_3_1_8, 7);
+}
 
+static void
+utf_8_test_3_3 ()
+{
+    /* We don't handle 0xC0... cases. */
+    utf8_to_ucs2_expect (kuhn_3_3_1, UTF8_BAD_LEADING_BYTE);
+    utf8_to_ucs2_expect (kuhn_3_3_2, UTF8_BAD_CONTINUATION_BYTE);
+    utf8_to_ucs2_expect (kuhn_3_3_3, UTF8_BAD_CONTINUATION_BYTE);
+    /* We don't handle these long cases. */
+    utf8_to_ucs2_expect (kuhn_3_3_4, UTF8_BAD_LEADING_BYTE);
+    utf8_to_ucs2_expect (kuhn_3_3_5, UTF8_BAD_LEADING_BYTE);
+    utf8_to_ucs2_expect (kuhn_3_3_6, UTF8_BAD_CONTINUATION_BYTE);
+    utf8_to_ucs2_expect (kuhn_3_3_7, UTF8_BAD_CONTINUATION_BYTE);
+    utf8_to_ucs2_expect (kuhn_3_3_8, UTF8_BAD_LEADING_BYTE);
+    utf8_to_ucs2_expect (kuhn_3_3_9, UTF8_BAD_LEADING_BYTE);
+    utf8_to_ucs2_expect (kuhn_3_3_10, UTF8_BAD_LEADING_BYTE);
+}
+
+static void
+utf_8_test_3_5 ()
+{
+    utf8_to_ucs2_expect (kuhn_3_5_1, UTF8_BAD_LEADING_BYTE);
+    utf8_to_ucs2_expect (kuhn_3_5_2, UTF8_BAD_LEADING_BYTE);
+    allbadfirst (kuhn_3_5_3, 4);
+}
+
+static void
+utf_8_test_3 ()
+{
+    utf_8_test_3_1 ();
+    utf_8_test_3_3 ();
+    utf_8_test_3_5 ();
+}
+
+static void
+utf_8_test_4_1 ()
+{
+    /* We don't allow the leading byte 0xC0 anyway. */
+    utf8_to_ucs2_expect (kuhn_4_1_1, UTF8_BAD_LEADING_BYTE);
+    utf8_to_ucs2_expect (kuhn_4_1_2, UTF8_NON_SHORTEST);
+    utf8_to_ucs2_expect (kuhn_4_1_3, UTF8_NON_SHORTEST);
+    /* These are five and six bytes so they are rejected at the first
+       byte. */
+    utf8_to_ucs2_expect (kuhn_4_1_4, UTF8_BAD_LEADING_BYTE);
+    utf8_to_ucs2_expect (kuhn_4_1_5, UTF8_BAD_LEADING_BYTE);
+}
+
+static void
+utf_8_test_4_2 ()
+{
+    /* We don't allow the leading byte 0xC1 anyway. */
+    utf8_to_ucs2_expect (kuhn_4_2_1, UTF8_BAD_LEADING_BYTE);
+    utf8_to_ucs2_expect (kuhn_4_2_2, UTF8_NON_SHORTEST);
+    utf8_to_ucs2_expect (kuhn_4_2_3, UTF8_NON_SHORTEST);
+    /* These are five and six bytes so they are rejected at the first
+       byte. */
+    utf8_to_ucs2_expect (kuhn_4_2_4, UTF8_BAD_LEADING_BYTE);
+    utf8_to_ucs2_expect (kuhn_4_2_5, UTF8_BAD_LEADING_BYTE);
+}
+
+static void
+utf_8_test_4_3 ()
+{
+    /* We don't allow the leading byte 0xC0 anyway. */
+    utf8_to_ucs2_expect (kuhn_4_3_1, UTF8_BAD_LEADING_BYTE);
+    utf8_to_ucs2_expect (kuhn_4_3_2, UTF8_NON_SHORTEST);
+    utf8_to_ucs2_expect (kuhn_4_3_3, UTF8_NON_SHORTEST);
+    /* These are five and six bytes so they are rejected at the first
+       byte. */
+    utf8_to_ucs2_expect (kuhn_4_3_4, UTF8_BAD_LEADING_BYTE);
+    utf8_to_ucs2_expect (kuhn_4_3_5, UTF8_BAD_LEADING_BYTE);
+}
+
+static void
+utf_8_test_4 ()
+{
+    utf_8_test_4_1 ();
+    utf_8_test_4_2 ();
+    utf_8_test_4_3 ();
+}
+
+static void
+utf_8_test_5_1 ()
+{
+    utf8_to_ucs2_expect (kuhn_5_1_1, UNICODE_SURROGATE_PAIR);
+    utf8_to_ucs2_expect (kuhn_5_1_2, UNICODE_SURROGATE_PAIR);
+    utf8_to_ucs2_expect (kuhn_5_1_3, UNICODE_SURROGATE_PAIR);
+    utf8_to_ucs2_expect (kuhn_5_1_4, UNICODE_SURROGATE_PAIR);
+    utf8_to_ucs2_expect (kuhn_5_1_5, UNICODE_SURROGATE_PAIR);
+    utf8_to_ucs2_expect (kuhn_5_1_6, UNICODE_SURROGATE_PAIR);
+    utf8_to_ucs2_expect (kuhn_5_1_7, UNICODE_SURROGATE_PAIR);
+}
+
+static void
+utf_8_test_5_2 ()
+{
+    utf8_to_ucs2_expect (kuhn_5_2_1, UNICODE_SURROGATE_PAIR);
+}
+
+static void
+utf_8_test_5_3 ()
+{
+    utf8_to_ucs2_expect (kuhn_5_3_1, UNICODE_NOT_CHARACTER);
+    utf8_to_ucs2_expect (kuhn_5_3_2, UNICODE_NOT_CHARACTER);
+}
+
+static void
+utf_8_test_5 ()
+{
+    utf_8_test_5_1 ();
+    utf_8_test_5_2 ();
+    utf_8_test_5_3 ();
 }
 
 int main ()
@@ -92,6 +206,8 @@ int main ()
     utf_8_test_1 ();
     utf_8_test_2 ();
     utf_8_test_3 ();
+    utf_8_test_4 ();
+    utf_8_test_5 ();
     TAP_PLAN;
     return 0;
 }

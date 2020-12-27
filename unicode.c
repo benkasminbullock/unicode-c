@@ -203,6 +203,11 @@ utf8_no_checks (const uint8_t * input, const uint8_t ** end_ptr)
     }
 }
 
+#define UNI_SUR_HIGH_START  0xD800
+#define UNI_SUR_HIGH_END    0xDBFF
+#define UNI_SUR_LOW_START   0xDC00
+#define UNI_SUR_LOW_END     0xDFFF
+
 /* This function converts UTF-8 encoded bytes in "input" into the
    equivalent Unicode code point. The return value is the Unicode code
    point corresponding to the UTF-8 character in "input" if
@@ -214,12 +219,14 @@ utf8_no_checks (const uint8_t * input, const uint8_t ** end_ptr)
    If the first byte of "input" is zero, UNICODE_EMPTY_INPUT is
    returned. If the first byte of "input" is not valid UTF-8,
    UTF8_BAD_LEADING_BYTE is returned. If the second or later bytes of
-   "input" are not valid UTF-8, UTF8_BAD_CONTINUATION_BYTE is returned. If the
-   UTF-8 is not in the shortest possible form, the error
-   UTF8_NON_SHORTEST is returned. If the value extrapolated from
+   "input" are not valid UTF-8, UTF8_BAD_CONTINUATION_BYTE is
+   returned. If the UTF-8 is not in the shortest possible form, the
+   error UTF8_NON_SHORTEST is returned. If the value extrapolated from
    "input" is greater than UNICODE_MAXIMUM, UNICODE_TOO_BIG is
    returned. If the value extrapolated from "input" ends in 0xFFFF or
-   0xFFFE, UNICODE_NOT_CHARACTER is returned. */
+   0xFFFE, UNICODE_NOT_CHARACTER is returned. If the value is within
+   the range of surrogate pairs, the error UNICODE_SURROGATE_PAIR is
+   returned. */
 
 int32_t
 utf8_to_ucs2 (const uint8_t * input, const uint8_t ** end_ptr)
@@ -250,6 +257,7 @@ utf8_to_ucs2 (const uint8_t * input, const uint8_t ** end_ptr)
             ((int32_t) (input[1] & 0x3F));
     }
     if (l == 3) {
+	int32_t r;
 	/* Three byte case. */
         if (input[1] < 0x80 || input[1] > 0xBF ||
 	    input[2] < 0x80 || input[2] > 0xBF) {
@@ -262,10 +270,17 @@ utf8_to_ucs2 (const uint8_t * input, const uint8_t ** end_ptr)
 	    return UTF8_NON_SHORTEST;
 	}
         * end_ptr = input + 3;
-        return
-            ((int32_t) (c & 0x0F)) << 12 |
+        r = ((int32_t) (c & 0x0F)) << 12 |
             ((int32_t) (input[1] & 0x3F)) << 6  |
             ((int32_t) (input[2] & 0x3F));
+	if ((r & 0xFFFE) == 0xFFFE) {
+	    return UNICODE_NOT_CHARACTER;
+	}
+	if ((r >= UNI_SUR_HIGH_START && r <= UNI_SUR_HIGH_END) ||
+	    (r >= UNI_SUR_LOW_START && r <= UNI_SUR_LOW_END)) {
+	    return UNICODE_SURROGATE_PAIR;
+	}
+	return r;
     }
     if (l == 4) {
 	/* Four byte case. */
@@ -308,10 +323,6 @@ utf8_to_ucs2 (const uint8_t * input, const uint8_t ** end_ptr)
     return UTF8_BAD_LEADING_BYTE;
 }
 
-#define UNI_SUR_HIGH_START  0xD800
-#define UNI_SUR_HIGH_END    0xDBFF
-#define UNI_SUR_LOW_START   0xDC00
-#define UNI_SUR_LOW_END     0xDFFF
 
 /* Input: a Unicode code point, "ucs2". 
 
