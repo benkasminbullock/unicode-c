@@ -8,7 +8,7 @@ CFUNCTIONS=/home/ben/software/install/bin/cfunctions
 
 CTT=/home/ben/projects/c-tap-test
 
-all: c-tap-test.h unicode.h unicode-character-class.h
+all: c-tap-test.h unicode.h unicode-character-class.h utf-8-test-data.c
 	make -f Makefile
 
 test:
@@ -24,6 +24,9 @@ unicode.h:	unicode.c
 
 unicode-character-class.h:	unicode-character-class.c
 	$(CFUNCTIONS) unicode-character-class.c
+
+utf-8-test-data.c: utf-8-test.pl UTF-8-test.txt
+	./utf-8-test.pl
 
 
 veryclean:
