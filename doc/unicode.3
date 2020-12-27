@@ -1,4 +1,4 @@
-.Dd Sun Dec 27 13:41:48 2020
+.Dd Sun Dec 27 14:33:17 2020
 .Dt UNICODE 3
 .Sh NAME
 .Nm surrogate_to_utf8
@@ -60,7 +60,13 @@ Input: a Unicode code point, "ucs2".
 .Pp
 Output: UTF-8 characters in buffer "utf8". 
 .Pp
-Return value: the number of bytes written into "utf8", or a negative number if there was an error. If the value of "ucs2" is invalid because of being in the surrogate pair range from 0xD800 to 0xDFFF, the return value is UNICODE_SURROGATE_PAIR (-2), else if the value is too big to fit into four bytes of UTF-8, UNICODE_UTF8_4 (0x1fffff), the return value is UNICODE_TOO_BIG (-7). However, it does not insist on ucs2 being less than UNICODE_MAXIMUM (0x10ffff), so the user needs to check that "ucs2" is a valid code point. It also does not check for invalid characters, such as 0xFFFF.
+Return value: the number of bytes written into "utf8", or a negative number if there was an error. 
+.Pp
+If the value of "ucs2" is invalid because of being in the surrogate pair range from 0xD800 to 0xDFFF, the return value is UNICODE_SURROGATE_PAIR (-2).
+.Pp
+If the value is too big to fit into four bytes of UTF-8, UNICODE_UTF8_4 (0x1fffff), the return value is UNICODE_TOO_BIG (-7).
+.Pp
+However, it does not insist on ucs2 being less than UNICODE_MAXIMUM (0x10ffff), so the user needs to check that "ucs2" is a valid code point.
 .Pp
 This adds a zero byte to the end of the string. It assumes that the buffer "utf8" has at least UNICODE_MAX_LENGTH (5) bytes of space to write to, without checking.
 .Ss unicode_chars_to_bytes
@@ -131,9 +137,25 @@ Try to convert "input" from UTF-8 to UCS-2, and return a value even if the input
 .Fa "const uint8_t ** end_ptr"
 .Fc
 .Pp
-This function converts UTF-8 encoded bytes in "input" into the equivalent Unicode code point. The return value is the Unicode code point corresponding to the UTF-8 character in "input" if successful, and a negative number if not successful. "*end_ptr" is set to the next character after the read character on success. "*end_ptr" is set to the start of input on failure. "end_ptr" may not be null.
+This function converts UTF-8 encoded bytes in "input" into the equivalent Unicode code point.  The return value is the Unicode code point corresponding to the UTF-8 character in "input" if successful, and a negative number if not successful.  Nul bytes are rejected.
 .Pp
-If the first byte of "input" is zero, UNICODE_EMPTY_INPUT (-5) is returned. If the first byte of "input" is not valid UTF-8, UTF8_BAD_LEADING_BYTE (-1) is returned. If the second or later bytes of "input" are not valid UTF-8, UTF8_BAD_CONTINUATION_BYTE (-4) is returned. If the UTF-8 is not in the shortest possible form, the error UTF8_NON_SHORTEST (-6) is returned. If the value extrapolated from "input" is greater than UNICODE_MAXIMUM (0x10ffff), UNICODE_TOO_BIG (-7) is returned. If the value extrapolated from "input" ends in 0xFFFF or 0xFFFE, UNICODE_NOT_CHARACTER (-8) is returned. If the value is within the range of surrogate pairs, the error UNICODE_SURROGATE_PAIR (-2) is returned.
+"*end_ptr" is set to the next character after the read character on success.  "*end_ptr" is set to the start of input on all failures. "end_ptr" may not be NULL.
+.Pp
+If the first byte of "input" is zero, in other words a NUL or '\0', UNICODE_EMPTY_INPUT (-5) is returned.
+.Pp
+If the first byte of "input" is not valid UTF-8, UTF8_BAD_LEADING_BYTE (-1) is returned.
+.Pp
+If the second or later bytes of "input" are not valid UTF-8, including NUL, UTF8_BAD_CONTINUATION_BYTE (-4) is returned.
+.Pp
+If the UTF-8 is not in the shortest possible form, the error UTF8_NON_SHORTEST (-6) is returned.
+.Pp
+If the value extrapolated from "input" is greater than UNICODE_MAXIMUM (0x10ffff), UNICODE_TOO_BIG (-7) is returned.
+.Pp
+If the value extrapolated from "input" ends in 0xFFFF or 0xFFFE, UNICODE_NOT_CHARACTER (-8) is returned.
+.Pp
+If the value extrapolated from "input" is between 0xFDD0 and 0xFDEF,  UNICODE_NOT_CHARACTER (-8) is returned.
+.Pp
+If the value is within the range of surrogate pairs, the error UNICODE_SURROGATE_PAIR (-2) is returned.
 .Ss valid_utf8
 .Ft int32_t
 .Fo valid_utf8
@@ -154,7 +176,7 @@ The maximum possible value of a Unicode code point. See http://www.cl.cam.ac.uk/
 .Ss UNICODE_NOT_CHARACTER
 UNICODE_NOT_CHARACTER (-8)
 .Pp
-This return value indicates that the Unicode code-point ended with either 0xFFFF or 0xFFFE, meaning it cannot be used as a character code point.
+This return value indicates that the Unicode code-point ended with either 0xFFFF or 0xFFFE, meaning it cannot be used as a character code point, or it was in the disallowed range FDD0 to FDEF.
 .Ss UNICODE_NOT_SURROGATE_PAIR
 UNICODE_NOT_SURROGATE_PAIR (-3)
 .Pp
@@ -166,7 +188,7 @@ This return value indicates the successful completion of a routine which doesn't
 .Ss UNICODE_SURROGATE_PAIR
 UNICODE_SURROGATE_PAIR (-2)
 .Pp
-This return value means the caller attempted to turn a code point for a surrogate pair into UTF-8.
+This return value means the caller attempted to turn a code point for a surrogate pair to or from UTF-8.
 .Ss UNICODE_TOO_BIG
 UNICODE_TOO_BIG (-7)
 .Pp
@@ -175,6 +197,14 @@ This return value indicates that there was an attempt to convert a code point wh
 UNICODE_UTF8_4 (0x1fffff)
 .Pp
 The maximum possible value which will fit into four bytes of UTF-8. This is larger than UNICODE_MAXIMUM.
+.Ss UNI_NOT_CHAR_MAX
+UNI_NOT_CHAR_MAX (0xFDEF)
+.Pp
+Undocumented.
+.Ss UNI_NOT_CHAR_MIN
+UNI_NOT_CHAR_MIN (0xFDD0)
+.Pp
+Undocumented.
 .Ss UTF8_BAD_CONTINUATION_BYTE
 UTF8_BAD_CONTINUATION_BYTE (-4)
 .Pp

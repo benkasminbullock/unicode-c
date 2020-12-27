@@ -63,7 +63,7 @@
 #define UTF8_BAD_LEADING_BYTE -1
 
 /* This return value means the caller attempted to turn a code point
-   for a surrogate pair into UTF-8. */
+   for a surrogate pair to or from UTF-8. */
 
 #define UNICODE_SURROGATE_PAIR -2
 
@@ -100,7 +100,7 @@
 
 /* This return value indicates that the Unicode code-point ended with
    either 0xFFFF or 0xFFFE, meaning it cannot be used as a character
-   code point. */
+   code point, or it was in the disallowed range FDD0 to FDEF. */
 
 #define UNICODE_NOT_CHARACTER -8
 
@@ -165,6 +165,22 @@ int32_t utf8_bytes (uint8_t c)
     | (((int32_t) (x[2] & 0x3F)) <<  6)				\
     | (((int32_t) (x[3] & 0x3F)))
 
+#define REJECT_FFFF(x)				\
+    if ((x & 0xFFFF) >= 0xFFFE) {		\
+	return UNICODE_NOT_CHARACTER;		\
+    }
+
+#define REJECT_NOT_CHAR(r)					\
+    if (r >= UNI_NOT_CHAR_MIN && r <= UNI_NOT_CHAR_MAX) {	\
+	return UNICODE_NOT_CHARACTER;				\
+    }
+
+#define REJECT_SURROGATE(ucs2)						\
+    if (ucs2 >= UNI_SUR_HIGH_START && ucs2 <= UNI_SUR_LOW_END) {	\
+	/* Ill-formed. */						\
+	return UNICODE_SURROGATE_PAIR;					\
+    }
+
 /* Try to convert "input" from UTF-8 to UCS-2, and return a value even
    if the input is partly broken.  This checks the first byte of the
    input, but it doesn't check the subsequent bytes. */
@@ -208,31 +224,50 @@ utf8_no_checks (const uint8_t * input, const uint8_t ** end_ptr)
 #define UNI_SUR_LOW_START   0xDC00
 #define UNI_SUR_LOW_END     0xDFFF
 
-/* This function converts UTF-8 encoded bytes in "input" into the
-   equivalent Unicode code point. The return value is the Unicode code
-   point corresponding to the UTF-8 character in "input" if
-   successful, and a negative number if not successful. "*end_ptr" is
-   set to the next character after the read character on
-   success. "*end_ptr" is set to the start of input on
-   failure. "end_ptr" may not be null.
+#define UNI_NOT_CHAR_MIN    0xFDD0
+#define UNI_NOT_CHAR_MAX    0xFDEF
 
-   If the first byte of "input" is zero, UNICODE_EMPTY_INPUT is
-   returned. If the first byte of "input" is not valid UTF-8,
-   UTF8_BAD_LEADING_BYTE is returned. If the second or later bytes of
-   "input" are not valid UTF-8, UTF8_BAD_CONTINUATION_BYTE is
-   returned. If the UTF-8 is not in the shortest possible form, the
-   error UTF8_NON_SHORTEST is returned. If the value extrapolated from
-   "input" is greater than UNICODE_MAXIMUM, UNICODE_TOO_BIG is
-   returned. If the value extrapolated from "input" ends in 0xFFFF or
-   0xFFFE, UNICODE_NOT_CHARACTER is returned. If the value is within
-   the range of surrogate pairs, the error UNICODE_SURROGATE_PAIR is
-   returned. */
+/* This function converts UTF-8 encoded bytes in "input" into the
+   equivalent Unicode code point.  The return value is the Unicode
+   code point corresponding to the UTF-8 character in "input" if
+   successful, and a negative number if not successful.  Nul bytes are
+   rejected.
+
+   "*end_ptr" is set to the next character after the read character on
+   success.  "*end_ptr" is set to the start of input on all failures.
+   "end_ptr" may not be NULL.
+
+   If the first byte of "input" is zero, in other words a NUL or '\0',
+   UNICODE_EMPTY_INPUT is returned.
+
+   If the first byte of "input" is not valid UTF-8,
+   UTF8_BAD_LEADING_BYTE is returned.
+
+   If the second or later bytes of "input" are not valid UTF-8,
+   including NUL, UTF8_BAD_CONTINUATION_BYTE is returned.
+
+   If the UTF-8 is not in the shortest possible form, the error
+   UTF8_NON_SHORTEST is returned.
+
+   If the value extrapolated from "input" is greater than
+   UNICODE_MAXIMUM, UNICODE_TOO_BIG is returned.
+
+   If the value extrapolated from "input" ends in 0xFFFF or 0xFFFE,
+   UNICODE_NOT_CHARACTER is returned.
+
+   If the value extrapolated from "input" is between 0xFDD0 and 0xFDEF, 
+   UNICODE_NOT_CHARACTER is returned.
+
+   If the value is within the range of surrogate pairs, the error
+   UNICODE_SURROGATE_PAIR is returned. 
+*/
 
 int32_t
 utf8_to_ucs2 (const uint8_t * input, const uint8_t ** end_ptr)
 {
     uint8_t c;
     uint8_t l;
+
     *end_ptr = input;
     c = input[0];
     if (c == 0) {
@@ -241,7 +276,7 @@ utf8_to_ucs2 (const uint8_t * input, const uint8_t ** end_ptr)
     l = utf8_sequence_len[c];
     if (l == 1) {
         * end_ptr = input + 1;
-        return c;
+        return (int32_t) c;
     }
     if (l == 2) {
 	/* Two byte case. */
@@ -258,6 +293,7 @@ utf8_to_ucs2 (const uint8_t * input, const uint8_t ** end_ptr)
     }
     if (l == 3) {
 	int32_t r;
+
 	/* Three byte case. */
         if (input[1] < 0x80 || input[1] > 0xBF ||
 	    input[2] < 0x80 || input[2] > 0xBF) {
@@ -269,25 +305,22 @@ utf8_to_ucs2 (const uint8_t * input, const uint8_t ** end_ptr)
 	       it is 10xxxxxx. */
 	    return UTF8_NON_SHORTEST;
 	}
-        * end_ptr = input + 3;
         r = ((int32_t) (c & 0x0F)) << 12 |
             ((int32_t) (input[1] & 0x3F)) << 6  |
             ((int32_t) (input[2] & 0x3F));
-	if ((r & 0xFFFE) == 0xFFFE) {
-	    return UNICODE_NOT_CHARACTER;
-	}
-	if ((r >= UNI_SUR_HIGH_START && r <= UNI_SUR_HIGH_END) ||
-	    (r >= UNI_SUR_LOW_START && r <= UNI_SUR_LOW_END)) {
-	    return UNICODE_SURROGATE_PAIR;
-	}
+	REJECT_SURROGATE(r);
+	REJECT_FFFF(r);
+	REJECT_NOT_CHAR(r);
+        * end_ptr = input + 3;
 	return r;
     }
-    if (l == 4) {
+    else if (l == 4) {
 	/* Four byte case. */
 	uint8_t d;
 	uint8_t e;
 	uint8_t f;
 	int32_t v;
+
 	d = input[1];
 	e = input[2];
 	f = input[3];
@@ -314,9 +347,10 @@ utf8_to_ucs2 (const uint8_t * input, const uint8_t ** end_ptr)
 	    return UNICODE_TOO_BIG;
 	}
 	/* Non-characters U+nFFFE..U+nFFFF on plane 1-16 */
-	if ((v & 0xffff) >= 0xfffe) {
-	    return UNICODE_NOT_CHARACTER;
-	}
+	REJECT_FFFF(v);
+	/* We don't need to check for surrogate pairs here, since the
+	   minimum value of UCS2 if there are four bytes of UTF-8 is
+	   0x10000. */
         * end_ptr = input + 4;
 	return v;
     }
@@ -329,14 +363,18 @@ utf8_to_ucs2 (const uint8_t * input, const uint8_t ** end_ptr)
    Output: UTF-8 characters in buffer "utf8". 
 
    Return value: the number of bytes written into "utf8", or a
-   negative number if there was an error. If the value of "ucs2" is
-   invalid because of being in the surrogate pair range from 0xD800 to
-   0xDFFF, the return value is UNICODE_SURROGATE_PAIR, else if the
-   value is too big to fit into four bytes of UTF-8, UNICODE_UTF8_4,
-   the return value is UNICODE_TOO_BIG. However, it does not insist on
-   ucs2 being less than UNICODE_MAXIMUM, so the user needs to check
-   that "ucs2" is a valid code point. It also does not check for
-   invalid characters, such as 0xFFFF.
+   negative number if there was an error. 
+
+   If the value of "ucs2" is invalid because of being in the surrogate
+   pair range from 0xD800 to 0xDFFF, the return value is
+   UNICODE_SURROGATE_PAIR.
+
+   If the value is too big to fit into four bytes of UTF-8,
+   UNICODE_UTF8_4, the return value is UNICODE_TOO_BIG.
+
+   However, it does not insist on ucs2 being less than
+   UNICODE_MAXIMUM, so the user needs to check that "ucs2" is a valid
+   code point.
 
    This adds a zero byte to the end of the string. It assumes that the
    buffer "utf8" has at least UNICODE_MAX_LENGTH (5) bytes of space to
@@ -361,10 +399,9 @@ ucs2_to_utf8 (int32_t ucs2, uint8_t * utf8)
         utf8[1] = ((ucs2 >> 6 ) & 0x3F) | 0x80;
         utf8[2] = ((ucs2      ) & 0x3F) | 0x80;
         utf8[3] = '\0';
-	if (ucs2 >= UNI_SUR_HIGH_START && ucs2 <= UNI_SUR_LOW_END) {
-	    /* Ill-formed. */
-	    return UNICODE_SURROGATE_PAIR;
-	}
+	REJECT_SURROGATE(ucs2);
+	REJECT_FFFF(ucs2);
+	REJECT_NOT_CHAR(ucs2);
         return 3;
     }
     if (ucs2 <= UNICODE_UTF8_4) {

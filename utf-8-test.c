@@ -20,7 +20,15 @@ utf8_to_ucs2_expect (const char * in, int expect)
 
     TAP_TEST_EQUAL (utf8_to_ucs2 ((uint8_t *) in, & end), expect);
     if (expect > 0) {
+	/* If the call succeeds, end is pointing after the UTF-8
+	   "rune", which is the end of the string in all of our cases,
+	   so check that was done correctly. */
 	TAP_TEST (*end == '\0');
+    }
+    else {
+	/* Check the documentation promise that end is the same as in
+	   if the call fails. */
+	TAP_TEST (end = (uint8_t *) in);
     }
 }
 
@@ -88,6 +96,9 @@ utf_8_test_3_1 ()
     allbadfirst (kuhn_3_1_8, 7);
 }
 
+/* Tests for bad continuation bytes. Some of these fail to be valid
+   for our Unicode-only purposes anyway. */
+
 static void
 utf_8_test_3_3 ()
 {
@@ -120,6 +131,8 @@ utf_8_test_3 ()
     utf_8_test_3_3 ();
     utf_8_test_3_5 ();
 }
+
+/* Non-shortest sequences. */
 
 static void
 utf_8_test_4_1 ()
@@ -183,14 +196,31 @@ utf_8_test_5_1 ()
 static void
 utf_8_test_5_2 ()
 {
-    utf8_to_ucs2_expect (kuhn_5_2_1, UNICODE_SURROGATE_PAIR);
+    int i;
+
+    /* These all have two items in them. */
+
+    for (i = 0; i < 6; i += 3) {
+	utf8_to_ucs2_expect (kuhn_5_2_1 + i, UNICODE_SURROGATE_PAIR);
+	utf8_to_ucs2_expect (kuhn_5_2_2 + i, UNICODE_SURROGATE_PAIR);
+	utf8_to_ucs2_expect (kuhn_5_2_3 + i, UNICODE_SURROGATE_PAIR);
+	utf8_to_ucs2_expect (kuhn_5_2_4 + i, UNICODE_SURROGATE_PAIR);
+	utf8_to_ucs2_expect (kuhn_5_2_5 + i, UNICODE_SURROGATE_PAIR);
+	utf8_to_ucs2_expect (kuhn_5_2_6 + i, UNICODE_SURROGATE_PAIR);
+    }
 }
 
 static void
 utf_8_test_5_3 ()
 {
+    int i;
+    int l;
     utf8_to_ucs2_expect (kuhn_5_3_1, UNICODE_NOT_CHARACTER);
     utf8_to_ucs2_expect (kuhn_5_3_2, UNICODE_NOT_CHARACTER);
+    l = strlen (kuhn_5_3_3);
+    for (i = 0; i < l; i += 3) {
+	utf8_to_ucs2_expect (kuhn_5_3_3 + i, UNICODE_NOT_CHARACTER);
+    }
 }
 
 static void

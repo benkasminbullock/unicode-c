@@ -1,5 +1,5 @@
 {
-	"date":"Sun Dec 27 13:41:48 2020",
+	"date":"Sun Dec 27 14:33:17 2020",
 	"description":" This file is a Unicode library in the programming language C which\n   deals with conversions to and from the UTF-8 format. ",
 	"functions":[
 		{
@@ -34,7 +34,7 @@
 				"int32_t ucs2",
 				"uint8_t * utf8"
 			],
-			"desc":"Input: a Unicode code point, \"ucs2\". \n.Pp\nOutput: UTF-8 characters in buffer \"utf8\". \n.Pp\nReturn value: the number of bytes written into \"utf8\", or a negative number if there was an error. If the value of \"ucs2\" is invalid because of being in the surrogate pair range from 0xD800 to 0xDFFF, the return value is UNICODE_SURROGATE_PAIR (-2), else if the value is too big to fit into four bytes of UTF-8, UNICODE_UTF8_4 (0x1fffff), the return value is UNICODE_TOO_BIG (-7). However, it does not insist on ucs2 being less than UNICODE_MAXIMUM (0x10ffff), so the user needs to check that \"ucs2\" is a valid code point. It also does not check for invalid characters, such as 0xFFFF.\n.Pp\nThis adds a zero byte to the end of the string. It assumes that the buffer \"utf8\" has at least UNICODE_MAX_LENGTH (5) bytes of space to write to, without checking.",
+			"desc":"Input: a Unicode code point, \"ucs2\". \n.Pp\nOutput: UTF-8 characters in buffer \"utf8\". \n.Pp\nReturn value: the number of bytes written into \"utf8\", or a negative number if there was an error. \n.Pp\nIf the value of \"ucs2\" is invalid because of being in the surrogate pair range from 0xD800 to 0xDFFF, the return value is UNICODE_SURROGATE_PAIR (-2).\n.Pp\nIf the value is too big to fit into four bytes of UTF-8, UNICODE_UTF8_4 (0x1fffff), the return value is UNICODE_TOO_BIG (-7).\n.Pp\nHowever, it does not insist on ucs2 being less than UNICODE_MAXIMUM (0x10ffff), so the user needs to check that \"ucs2\" is a valid code point.\n.Pp\nThis adds a zero byte to the end of the string. It assumes that the buffer \"utf8\" has at least UNICODE_MAX_LENGTH (5) bytes of space to write to, without checking.",
 			"name":"ucs2_to_utf8",
 			"type":"int32_t"
 		},
@@ -103,7 +103,7 @@
 				"const uint8_t * input",
 				"const uint8_t ** end_ptr"
 			],
-			"desc":"This function converts UTF-8 encoded bytes in \"input\" into the equivalent Unicode code point. The return value is the Unicode code point corresponding to the UTF-8 character in \"input\" if successful, and a negative number if not successful. \"*end_ptr\" is set to the next character after the read character on success. \"*end_ptr\" is set to the start of input on failure. \"end_ptr\" may not be null.\n.Pp\nIf the first byte of \"input\" is zero, UNICODE_EMPTY_INPUT (-5) is returned. If the first byte of \"input\" is not valid UTF-8, UTF8_BAD_LEADING_BYTE (-1) is returned. If the second or later bytes of \"input\" are not valid UTF-8, UTF8_BAD_CONTINUATION_BYTE (-4) is returned. If the UTF-8 is not in the shortest possible form, the error UTF8_NON_SHORTEST (-6) is returned. If the value extrapolated from \"input\" is greater than UNICODE_MAXIMUM (0x10ffff), UNICODE_TOO_BIG (-7) is returned. If the value extrapolated from \"input\" ends in 0xFFFF or 0xFFFE, UNICODE_NOT_CHARACTER (-8) is returned. If the value is within the range of surrogate pairs, the error UNICODE_SURROGATE_PAIR (-2) is returned.",
+			"desc":"This function converts UTF-8 encoded bytes in \"input\" into the equivalent Unicode code point.  The return value is the Unicode code point corresponding to the UTF-8 character in \"input\" if successful, and a negative number if not successful.  Nul bytes are rejected.\n.Pp\n\"*end_ptr\" is set to the next character after the read character on success.  \"*end_ptr\" is set to the start of input on all failures. \"end_ptr\" may not be NULL.\n.Pp\nIf the first byte of \"input\" is zero, in other words a NUL or '\\0', UNICODE_EMPTY_INPUT (-5) is returned.\n.Pp\nIf the first byte of \"input\" is not valid UTF-8, UTF8_BAD_LEADING_BYTE (-1) is returned.\n.Pp\nIf the second or later bytes of \"input\" are not valid UTF-8, including NUL, UTF8_BAD_CONTINUATION_BYTE (-4) is returned.\n.Pp\nIf the UTF-8 is not in the shortest possible form, the error UTF8_NON_SHORTEST (-6) is returned.\n.Pp\nIf the value extrapolated from \"input\" is greater than UNICODE_MAXIMUM (0x10ffff), UNICODE_TOO_BIG (-7) is returned.\n.Pp\nIf the value extrapolated from \"input\" ends in 0xFFFF or 0xFFFE, UNICODE_NOT_CHARACTER (-8) is returned.\n.Pp\nIf the value extrapolated from \"input\" is between 0xFDD0 and 0xFDEF,  UNICODE_NOT_CHARACTER (-8) is returned.\n.Pp\nIf the value is within the range of surrogate pairs, the error UNICODE_SURROGATE_PAIR (-2) is returned.",
 			"name":"utf8_to_ucs2",
 			"type":"int32_t"
 		},
@@ -129,7 +129,7 @@
 			"value":"0x10ffff"
 		},
 		{
-			"meaning":"This return value indicates that the Unicode code-point ended with either 0xFFFF or 0xFFFE, meaning it cannot be used as a character code point.",
+			"meaning":"This return value indicates that the Unicode code-point ended with either 0xFFFF or 0xFFFE, meaning it cannot be used as a character code point, or it was in the disallowed range FDD0 to FDEF.",
 			"name":"UNICODE_NOT_CHARACTER",
 			"value":"-8"
 		},
@@ -144,7 +144,7 @@
 			"value":"0"
 		},
 		{
-			"meaning":"This return value means the caller attempted to turn a code point for a surrogate pair into UTF-8.",
+			"meaning":"This return value means the caller attempted to turn a code point for a surrogate pair to or from UTF-8.",
 			"name":"UNICODE_SURROGATE_PAIR",
 			"value":"-2"
 		},
@@ -157,6 +157,16 @@
 			"meaning":"The maximum possible value which will fit into four bytes of UTF-8. This is larger than UNICODE_MAXIMUM.",
 			"name":"UNICODE_UTF8_4",
 			"value":"0x1fffff"
+		},
+		{
+			"meaning":"Undocumented.",
+			"name":"UNI_NOT_CHAR_MAX",
+			"value":"0xFDEF"
+		},
+		{
+			"meaning":"Undocumented.",
+			"name":"UNI_NOT_CHAR_MIN",
+			"value":"0xFDD0"
 		},
 		{
 			"meaning":"This return value means that input which was supposed to be UTF-8 encoded contained an invalid continuation byte. If the leading byte of a UTF-8 sequence is not valid, UTF8_BAD_LEADING_BYTE is returned instead of this.",
