@@ -287,9 +287,9 @@ utf8_to_ucs2 (const uint8_t * input, const uint8_t ** end_ptr)
 	}
 
 	if (c == 0xf0 && d < 0x90) { 
-	    /* We don't need to check the values of e and d, because
+	    /* We don't need to check the values of e and f, because
 	       the if statement above this one already guarantees that
-	       e and d are 10xxxxxx. */
+	       e and f are 10xxxxxx. */
 	    return UTF8_NON_SHORTEST;
 	}
 	/* Calculate the code point. */
@@ -749,12 +749,12 @@ valid_utf8 (const uint8_t * input, int32_t input_length)
    second, third, or fourth byte of a multibyte sequence, "* ptr" is
    incremented until either "** ptr" is a valid first byte of a UTF-8
    sequence, or too many bytes have passed for it to be valid
-   UTF-8. If too many bytes have passed, UTF8_BAD_CONTINUATION_BYTE is returned
-   and "*ptr" is left unchanged. If a valid UTF-8 first byte was
-   found, either 11xx_xxxx or 00xx_xxxx, UNICODE_OK is returned, and
-   "*ptr" is set to the address of the valid byte. Nul bytes (bytes
-   containing zero) are considered valid. This does not check for
-   invalid UTF-8 bytes such as 0xFE and 0xFF. */
+   UTF-8. If too many bytes have passed, UTF8_BAD_CONTINUATION_BYTE is
+   returned and "*ptr" is left unchanged. If a valid UTF-8 first byte
+   was found, either 11xx_xxxx or 00xx_xxxx, UNICODE_OK is returned,
+   and "*ptr" is set to the address of the valid byte. Nul bytes
+   (bytes containing zero) are considered valid. This does not check
+   for invalid UTF-8 bytes such as 0xFE and 0xFF. */
 
 int32_t
 trim_to_utf8_start (uint8_t ** ptr)
