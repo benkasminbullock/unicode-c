@@ -1,0 +1,7 @@
+author: Ben Bullock
+email: benkasminbullock@gmail.com, bkb@cpan.org
+repository: https://github.com/benkasminbullock/unicode-c
+
+# Local variables:
+# mode: table-readable
+# End:

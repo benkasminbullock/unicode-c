@@ -7,7 +7,7 @@ all:	libunicode.a unicode.h
 install: all docinstall
 
 docinstall:	unicode.c
-	cd doc;make;cp -f unicode.3 /home/ben/software/install/man/man3/
+	cd doc;make;make install
 
 libunicode.a:	$(OBJS)
 	ar rcs $@ $(OBJS)

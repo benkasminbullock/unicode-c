@@ -88,7 +88,10 @@
 
 /* This return value indicates that UTF-8 bytes were not in the
    shortest possible form. See
-   http://www.cl.cam.ac.uk/~mgk25/unicode.html#utf-8. */
+   http://www.cl.cam.ac.uk/~mgk25/unicode.html#utf-8. 
+
+   This return value is currently unused. If a character is not in the
+   shortest form, the error UTF8_BAD_CONTINUATION_BYTE is returned. */
 
 #define UTF8_NON_SHORTEST -6
 
@@ -104,11 +107,13 @@
 
 #define UNICODE_NOT_CHARACTER -8
 
-/* This return value indicates that the UTF-8 is valid. */
+/* This return value indicates that the UTF-8 is valid. It is only
+   used by "valid_utf8". */
 
 #define UTF8_VALID 1
 
-/* This return value indicates that the UTF-8 is not valid. */
+/* This return value indicates that the UTF-8 is not valid. It is only
+   used by "valid_utf8". */
 
 #define UTF8_INVALID 0
 
@@ -230,7 +235,12 @@ utf8_no_checks (const uint8_t * input, const uint8_t ** end_ptr)
 #define UNI_SUR_LOW_START   0xDC00
 #define UNI_SUR_LOW_END     0xDFFF
 
+/* Start of the "not character" range. */
+
 #define UNI_NOT_CHAR_MIN    0xFDD0
+
+/* End of the "not character" range. */
+
 #define UNI_NOT_CHAR_MAX    0xFDEF
 
 /* This function converts UTF-8 encoded bytes in "input" into the
@@ -251,9 +261,6 @@ utf8_no_checks (const uint8_t * input, const uint8_t ** end_ptr)
 
    If the second or later bytes of "input" are not valid UTF-8,
    including NUL, UTF8_BAD_CONTINUATION_BYTE is returned.
-
-   If the UTF-8 is not in the shortest possible form, the error
-   UTF8_NON_SHORTEST is returned.
 
    If the value extrapolated from "input" is greater than
    UNICODE_MAXIMUM, UNICODE_TOO_BIG is returned.
@@ -285,35 +292,41 @@ utf8_to_ucs2 (const uint8_t * input, const uint8_t ** end_ptr)
         return (int32_t) c;
     }
     if (l == 2) {
+	uint8_t d;
+	d = input[1];
 	/* Two byte case. */
-        if (input[1] < 0x80 || input[1] > 0xBF) {
+        if (d < 0x80 || d > 0xBF) {
             return UTF8_BAD_CONTINUATION_BYTE;
 	}
 	if (c <= 0xC1) {
-	    return UTF8_NON_SHORTEST;
+            return UTF8_BAD_CONTINUATION_BYTE;
 	}
         * end_ptr = input + 2;
         return
             ((int32_t) (c & 0x1F) << 6)  |
-            ((int32_t) (input[1] & 0x3F));
+            ((int32_t) (d & 0x3F));
     }
     if (l == 3) {
+	uint8_t d;
+	uint8_t e;
 	int32_t r;
 
+	d = input[1];
+	e = input[2];
 	/* Three byte case. */
-        if (input[1] < 0x80 || input[1] > 0xBF ||
-	    input[2] < 0x80 || input[2] > 0xBF) {
+        if (d < 0x80 || d > 0xBF ||
+	    e < 0x80 || e > 0xBF) {
             return UTF8_BAD_CONTINUATION_BYTE;
 	}
-	if (c == 0xe0 && input[1] < 0xa0) { 
+	if (c == 0xe0 && d < 0xa0) { 
 	    /* We don't need to check the value of input[2], because
 	       the if statement above this one already guarantees that
 	       it is 10xxxxxx. */
-	    return UTF8_NON_SHORTEST;
+            return UTF8_BAD_CONTINUATION_BYTE;
 	}
         r = ((int32_t) (c & 0x0F)) << 12 |
-            ((int32_t) (input[1] & 0x3F)) << 6  |
-            ((int32_t) (input[2] & 0x3F));
+            ((int32_t) (d & 0x3F)) << 6  |
+            ((int32_t) (e & 0x3F));
 	REJECT_SURROGATE(r);
 	REJECT_FFFF(r);
 	REJECT_NOT_CHAR(r);
@@ -344,7 +357,7 @@ utf8_to_ucs2 (const uint8_t * input, const uint8_t ** end_ptr)
 	    /* We don't need to check the values of e and f, because
 	       the if statement above this one already guarantees that
 	       e and f are 10xxxxxx. */
-	    return UTF8_NON_SHORTEST;
+            return UTF8_BAD_CONTINUATION_BYTE;
 	}
 	/* Calculate the code point. */
 	v = FOUR (input);
@@ -375,6 +388,12 @@ utf8_to_ucs2 (const uint8_t * input, const uint8_t ** end_ptr)
    pair range from 0xD800 to 0xDFFF, the return value is
    UNICODE_SURROGATE_PAIR.
 
+   If the value of "ucs2" is in the range 0xFDD0 to 0xFDEF inclusive,
+   the return value is UNICODE_NOT_CHARACTER.
+
+   If the lower two bytes of "ucs2" are either 0xFFFE or 0xFFFF, the
+   return value is UNICODE_NOT_CHARACTER.
+
    If the value is too big to fit into four bytes of UTF-8,
    UNICODE_UTF8_4, the return value is UNICODE_TOO_BIG.
 
@@ -389,6 +408,7 @@ utf8_to_ucs2 (const uint8_t * input, const uint8_t ** end_ptr)
 int32_t
 ucs2_to_utf8 (int32_t ucs2, uint8_t * utf8)
 {
+    REJECT_FFFF(ucs2);
     if (ucs2 < 0x80) {
         utf8[0] = ucs2;
         utf8[1] = '\0';
@@ -406,7 +426,6 @@ ucs2_to_utf8 (int32_t ucs2, uint8_t * utf8)
         utf8[2] = ((ucs2      ) & 0x3F) | 0x80;
         utf8[3] = '\0';
 	REJECT_SURROGATE(ucs2);
-	REJECT_FFFF(ucs2);
 	REJECT_NOT_CHAR(ucs2);
         return 3;
     }
@@ -526,9 +545,9 @@ unicode_chars_to_bytes (const uint8_t * utf8, int32_t n_chars)
 }
 
 /* Like unicode_count_chars, but without error checks or validation of
-   the input. This only checks the first byte of each UTF-8
-   sequence. It may return UTF8_BAD_LEADING_BYTE if the first byte is
-   invalid. */
+   the input. This only checks the first byte of each UTF-8 sequence,
+   then jumps over the succeeding bytes. It may return
+   UTF8_BAD_LEADING_BYTE if the first byte is invalid. */
 
 int32_t
 unicode_count_chars_fast (const uint8_t * utf8)
@@ -616,6 +635,24 @@ unicode_count_chars (const uint8_t * utf8)
  case 0xB1: case 0xB2: case 0xB3: case 0xB4: case 0xB5: case 0xB6: case 0xB7: \
  case 0xB8: case 0xB9: case 0xBA: case 0xBB: case 0xBC: case 0xBD: case 0xBE: \
  case 0xBF
+#define BYTE_80_8F_B0_BF						\
+    0x80: case 0x81: case 0x82: case 0x83: case 0x84: case 0x85: case 0x86: \
+ case 0x87: case 0x88: case 0x89: case 0x8A: case 0x8B: case 0x8C: case 0x8D: \
+ case 0x8E: case 0x8F: case 0xB0:					\
+ case 0xB1: case 0xB2: case 0xB3: case 0xB4: case 0xB5: case 0xB6: case 0xB7: \
+ case 0xB8: case 0xB9: case 0xBA: case 0xBB: case 0xBC: case 0xBD: case 0xBE: \
+ case 0xBF
+#define BYTE_80_B6_B8_BF						\
+    0x80: case 0x81: case 0x82: case 0x83: case 0x84: case 0x85: case 0x86: \
+ case 0x87: case 0x88: case 0x89: case 0x8A: case 0x8B: case 0x8C: case 0x8D: \
+ case 0x8E: case 0x8F: case 0x90: case 0x91: case 0x92: case 0x93: case 0x94: \
+ case 0x95: case 0x96: case 0x97: case 0x98: case 0x99: case 0x9A: case 0x9B: \
+ case 0x9C: case 0x9D: case 0x9E: case 0x9F: case 0xA0: case 0xA1: case 0xA2: \
+ case 0xA3: case 0xA4: case 0xA5: case 0xA6: case 0xA7: case 0xA8: case 0xA9: \
+ case 0xAA: case 0xAB: case 0xAC: case 0xAD: case 0xAE: case 0xAF: case 0xB0: \
+ case 0xB1: case 0xB2: case 0xB3: case 0xB4: case 0xB5: case 0xB6: \
+ case 0xB8: case 0xB9: case 0xBA: case 0xBB: case 0xBC: case 0xBD: case 0xBE: \
+ case 0xBF
 #define BYTE_80_BD							\
     0x80: case 0x81: case 0x82: case 0x83: case 0x84: case 0x85: case 0x86: \
  case 0x87: case 0x88: case 0x89: case 0x8A: case 0x8B: case 0x8C: case 0x8D: \
@@ -649,8 +686,6 @@ unicode_count_chars (const uint8_t * utf8)
 #define BYTE_E1_EC							\
     0xE1: case 0xE2: case 0xE3: case 0xE4: case 0xE5: case 0xE6: case 0xE7: \
  case 0xE8: case 0xE9: case 0xEA: case 0xEB: case 0xEC
-#define BYTE_EE_EF				\
-    0xEE: case 0xEF
 #define BYTE_F1_F3				\
     0xF1: case 0xF2: case 0xF3
 #endif /* def HEADER */
@@ -668,23 +703,69 @@ unicode_count_chars (const uint8_t * utf8)
 int32_t
 valid_utf8 (const uint8_t * input, int32_t input_length)
 {
+    int32_t error;
+    utf8_info_t info;
+    error = validate_utf8 (input, input_length, & info);
+    if (error < 0) {
+	return UTF8_INVALID;
+    }
+    return UTF8_VALID;
+}
+
+#define FAIL(x)				\
+    info->len_read = i;			\
+    return x
+
+#ifdef HEADER
+
+typedef struct utf8_info 
+{
+    int32_t len_read;
+    int32_t runes_read;
+}
+utf8_info_t;
+
+#endif /* def HEADER */
+
+/* Given "input" and "len", validate "input" byte by byte up to
+   "len". The return value is "UNICODE_OK" (zero) on success or the
+   error found (a negative number) on failure.
+
+   utf8_info_t is defined in "unicode.h".
+
+   The value of "info.len_read" is the number of bytes processed. the
+   value of "info.runes_read" is the number of Unicode code points in
+   the input. */
+
+int32_t
+validate_utf8 (const uint8_t * input, int32_t len, utf8_info_t * info)
+{
     int32_t i;
     uint8_t c;
 
+    info->len_read = 0;
+    /* We want to increment the runes after "string_start", but that
+       would give us one too many. */
+    info->runes_read = -1;
     i = 0;
 
  string_start:
 
-    if (i >= input_length) {	
-	return UTF8_VALID;
+    /* We get here after successfully reading a "rune". */
+
+    info->runes_read++;
+    if (i >= len) {
+	info->len_read = len;
+	return UNICODE_OK; /* 0 */
     }
 
     /* Set c separately here since we use a range comparison before
        the switch statement. */
+
     c = input[i];
 
     if (c == 0) {
-	return UTF8_INVALID;
+	FAIL (UNICODE_EMPTY_INPUT);
     }
     /* Admit all bytes < 0x80. */
     if (c < 0x80) {
@@ -729,108 +810,134 @@ valid_utf8 (const uint8_t * input, int32_t input_length)
 	goto byte24_80_8f;
 
     default:
-	return UTF8_INVALID;
+	FAIL (UTF8_BAD_LEADING_BYTE);
     }
 
  byte_last_80_bf:
 
     switch (UNICODENEXTBYTE) {
-
     case BYTE_80_BF:
 	UNICODEADDBYTE;
 	goto string_start;
     default:
-	UNICODEFAILUTF8 (XBYTES_80_BF);
+	FAIL (UTF8_BAD_CONTINUATION_BYTE);
+    }
+
+ byte_ef_b7:
+    switch (UNICODENEXTBYTE) {
+    case BYTE_80_8F_B0_BF:
+	UNICODEADDBYTE;
+	goto string_start;
+    default:
+	if (c >= 0x90 && c <= 0xAF) {
+	    FAIL (UNICODE_NOT_CHARACTER);
+	}
+	else {
+	    FAIL (UTF8_BAD_CONTINUATION_BYTE);
+	}
     }
 
  byte_last_80_bd:
 
     switch (UNICODENEXTBYTE) {
-
     case BYTE_80_BD:
 	UNICODEADDBYTE;
 	goto string_start;
+    case 0xBE:
+    case 0xBF:
+	FAIL (UNICODE_NOT_CHARACTER);
     default:
-	UNICODEFAILUTF8 (XBYTES_80_BD);
+	FAIL (UTF8_BAD_CONTINUATION_BYTE);
     }
 
  byte_penultimate_80_bf:
 
     switch (UNICODENEXTBYTE) {
-
     case BYTE_80_BF:
 	UNICODEADDBYTE;
 	goto byte_last_80_bf;
     default:
-	UNICODEFAILUTF8 (XBYTES_80_BF);
+	FAIL (UTF8_BAD_CONTINUATION_BYTE);
     }
 
  byte_ef_80_bf:
-
     switch (UNICODENEXTBYTE) {
-
-    case BYTE_80_BF:
+    case BYTE_80_B6_B8_BF:
 	UNICODEADDBYTE;
 	goto byte_last_80_bd;
+    case 0xB7:
+	UNICODEADDBYTE;
+	/* FDD0 - FDE7 */
+	goto byte_ef_b7;
     default:
-	UNICODEFAILUTF8 (XBYTES_80_BF);
+	FAIL (UTF8_BAD_CONTINUATION_BYTE);
     }
 
  byte24_90_bf:
 
     switch (UNICODENEXTBYTE) {
-
     case BYTE_90_BF:
 	UNICODEADDBYTE;
 	goto byte_penultimate_80_bf;
     default:
-	UNICODEFAILUTF8 (XBYTES_90_BF);
+	FAIL (UTF8_BAD_CONTINUATION_BYTE);
     }
 
  byte23_80_9f:
 
     switch (UNICODENEXTBYTE) {
-
     case BYTE_80_9F:
 	UNICODEADDBYTE;
 	goto byte_last_80_bf;
     default:
-	UNICODEFAILUTF8 (XBYTES_80_9F);
+	if (c >= 0xA0 && c <= 0xBF) {
+	    FAIL (UNICODE_SURROGATE_PAIR);
+	}
+	else {
+	    FAIL (UTF8_BAD_CONTINUATION_BYTE);
+	}
     }
 
  byte23_a0_bf:
 
     switch (UNICODENEXTBYTE) {
-
     case BYTE_A0_BF:
 	UNICODEADDBYTE;
 	goto byte_last_80_bf;
     default:
-	UNICODEFAILUTF8 (XBYTES_A0_BF);
+	FAIL (UTF8_BAD_CONTINUATION_BYTE);
     }
 
  byte24_80_bf:
 
     switch (UNICODENEXTBYTE) {
-
     case BYTE_80_BF:
 	UNICODEADDBYTE;
 	goto byte_ef_80_bf;
     default:
-	UNICODEFAILUTF8 (XBYTES_80_BF);
+	FAIL (UTF8_BAD_CONTINUATION_BYTE);
     }
 
  byte24_80_8f:
 
     switch (UNICODENEXTBYTE) {
-
     case BYTE_80_8F:
 	UNICODEADDBYTE;
 	goto byte_ef_80_bf;
     default:
-	UNICODEFAILUTF8 (XBYTES_80_8F);
+	if (c >= 0x90) {
+	    FAIL (UNICODE_TOO_BIG);
+	}
+	else {
+	    FAIL (UTF8_BAD_CONTINUATION_BYTE);
+	}
     }
 }
+
+#define REJECT_FE_FF(c)				\
+    if (c == 0xFF || c == 0xFE) {		\
+	return UNICODE_NOT_CHARACTER;		\
+    }
 
 /* Make "* ptr" point to the start of the first UTF-8 character after
    its initial value. This assumes that there are at least four bytes
@@ -845,25 +952,34 @@ valid_utf8 (const uint8_t * input, int32_t input_length)
    incremented until either "** ptr" is a valid first byte of a UTF-8
    sequence, or too many bytes have passed for it to be valid
    UTF-8. If too many bytes have passed, UTF8_BAD_CONTINUATION_BYTE is
-   returned and "*ptr" is left unchanged. If a valid UTF-8 first byte
-   was found, either 11xx_xxxx or 00xx_xxxx, UNICODE_OK is returned,
-   and "*ptr" is set to the address of the valid byte. Nul bytes
-   (bytes containing zero) are considered valid. This does not check
-   for invalid UTF-8 bytes such as 0xFE and 0xFF. */
+   returned and "*ptr" is left unchanged. 
+
+   If a valid UTF-8 first byte was found, either 11xx_xxxx or
+   00xx_xxxx, UNICODE_OK is returned, and "*ptr" is set to the address
+   of the valid byte. Nul bytes (bytes containing zero) are considered
+   valid.
+
+   If any of the bytes read contains invalid UTF-8 bytes 0xFE and
+   0xFF, the error code UNICODE_NOT_CHARACTER is returned and "*ptr"
+   is left unchanged. */
 
 int32_t
-trim_to_utf8_start (uint8_t ** ptr)
+trim_to_utf8_start (const uint8_t ** ptr)
 {
-    uint8_t * p = *ptr;
+    const uint8_t * p = *ptr;
     uint8_t c;
     int32_t i;
+
+    c = * p;
+    REJECT_FE_FF (c);
     /* 0xC0 = 1100_0000. */
-    c = *p & 0xC0;
+    c &= 0xC0;
     if (c == 0xC0 || c == 0x00) {
 	return UNICODE_OK;
     }
     for (i = 0; i < UTF8_MAX_LENGTH - 1; i++) {
 	c = p[i];
+	REJECT_FE_FF (c);
 	if ((c & 0x80) != 0x80 || (c & 0x40) != 0) {
 	    * ptr = p + i;
 	    return UNICODE_OK;
@@ -921,6 +1037,7 @@ unicode_code_to_error (int32_t code)
 #include "c-tap-test.h"
 
 static const uint8_t * utf8 = (uint8_t *) "漢数字ÔÕÖＸ";
+static const uint8_t bad[] = {0x99, 0x99, 0x99, 0x99, 0x99, 0x99, 0x0};
 
 #define BUFFSIZE 0x100
 
@@ -1104,9 +1221,8 @@ static void
 test_trim_to_utf8_start ()
 {
     int32_t status;
-    uint8_t * p;
+    const uint8_t * p;
     /* Invalid UTF-8. */
-    uint8_t bad[] = {0x99, 0x99, 0x99, 0x99, 0x99, 0x99};
     /* Valid UTF-8. */
     uint8_t good[] = "化苦";
     uint8_t good2[] = "化abc";
@@ -1133,6 +1249,29 @@ test_constants ()
     TAP_TEST (UNICODE_UTF8_4 > UNICODE_MAXIMUM);
 }
 
+static void
+test_utf8_validate ()
+{
+    int r;
+    int l;
+    utf8_info_t info;
+
+    r = validate_utf8 ((const uint8_t *) "", 0, & info);
+    TAP_TEST_EQUAL (r, UNICODE_OK);
+    TAP_TEST_EQUAL (info.len_read, 0);
+    TAP_TEST_EQUAL (info.runes_read, 0);
+
+    l = strlen ((const char *) utf8);
+    r = validate_utf8 (utf8, l, & info);
+    TAP_TEST_EQUAL (r, UNICODE_OK);
+    TAP_TEST_EQUAL (info.len_read, l);
+    TAP_TEST_EQUAL (info.runes_read, 7);
+
+    l = strlen ((const char *) bad);
+    r = validate_utf8 (bad, l, & info);
+    TAP_TEST (r != UNICODE_OK);
+}
+
 int main ()
 {
     test_utf8_to_ucs2 ();
@@ -1144,6 +1283,7 @@ int main ()
     test_valid_utf8 ();
     test_trim_to_utf8_start ();
     test_constants ();
+    test_utf8_validate ();
     TAP_PLAN;
 }
 

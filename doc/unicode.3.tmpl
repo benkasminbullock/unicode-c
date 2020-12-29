@@ -22,7 +22,7 @@
 [% function.desc %]
 [%- END %]
 .Sh RETURN VALUE MACROS
-[%- FOR macro IN macros %]
+[%- FOR macro IN return_macros %]
 .Ss [% macro.name %]
 [% macro.name %] ([% macro.value %])
 .Pp

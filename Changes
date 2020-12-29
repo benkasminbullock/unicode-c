@@ -1,0 +1,4 @@
+* 2020-12-29
+
+- utf8_validate added
+- Do not return UTF8_NON_SHORTEST

@@ -90,25 +90,41 @@ warn "No functions found at all";
 }
 @functions = sort_by {$_->{name}} @functions;
 my @macros;
+my @return_macros;
 for my $m (sort keys %macros) {
-    if ($m =~ /_SUR_|LOW|BUFFSIZE|TEN_BITS/) {
+    if ($m =~ /_SUR_|LOW|BUFFSIZE|TEN_BITS|UNI_NOT_/) {
 	next;
     }
     my $meaning = $m2c{$m};
     if (! $meaning) {
+	warn "Macro $m is undocumented";
 	$meaning = 'Undocumented.';
     }
-    push @macros, {
-	name => $m,
-	value => $macros{$m},
-	meaning => $meaning,
-    };
+    my $value = $macros{$m};
+    if ($value =~ /^0x/i) {
+	$value = hex ($value);
+    }
+    if ($value <= 1) {
+	push @return_macros, {
+	    name => $m,
+	    value => $macros{$m},
+	    meaning => $meaning,
+	};
+    }
+    else {
+	push @macros, {
+	    name => $m,
+	    value => $macros{$m},
+	    meaning => $meaning,
+	};
+    }
 }
 my $outfile = "$Bin/doc.json";
 my %doc = (
     functions => \@functions,
     description => decomment ($maincomment),
     macros => \@macros,
+    return_macros => \@return_macros,
     date => scalar (gmtime ((stat ($in))[9])),
 );
 my $json = create_json (\%doc, sort => 1, indent => 1);

@@ -11,9 +11,8 @@ static void
 utf_8_test_1 ()
 {
     TAP_TEST (strcmp ((const char *) kuhn_1, "κόσμε") == 0);
+    TAP_TEST (valid_utf8 ((const uint8_t *) kuhn_1, strlen (kuhn_1)));
 }
-
-static int valid_todo = 0;
 
 static void
 utf8_to_ucs2_expect (const char * in, int expect)
@@ -27,16 +26,12 @@ utf8_to_ucs2_expect (const char * in, int expect)
     len = strlen (in);
     if (len > 0) {
 	valid = valid_utf8 ((const unsigned char *) in, len);
-	if (valid_todo) {
-	    tap_todo = 1;
-	}
 	if (expect > 0) {
 	    TAP_TEST (valid == UTF8_VALID);
 	}
 	else {
 	    TAP_TEST (valid == UTF8_INVALID);
 	}
-	tap_todo = 0;
     }
     if (expect > 0) {
 	/* If the call succeeds, end is pointing after the UTF-8
@@ -45,9 +40,15 @@ utf8_to_ucs2_expect (const char * in, int expect)
 	TAP_TEST (*end == '\0');
     }
     else {
+	int error;
 	/* Check the documentation promise that end is the same as in
 	   if the call fails. */
 	TAP_TEST (end = (uint8_t *) in);
+	if (len > 0) {
+	    utf8_info_t info;
+	    error = validate_utf8 ((const unsigned char *) in, len, & info);
+	    TAP_TEST_EQUAL (error, expect);
+	}
     }
 }
 
@@ -99,7 +100,7 @@ allbadfirst (const char * in, int len)
 {
     int i;
     for (i = 0; i < len; i++) {
-	printf ("%s:%d: OK %X\n", __FILE__, __LINE__, (unsigned char) in[i]);
+//	printf ("%s:%d: OK %X\n", __FILE__, __LINE__, (unsigned char) in[i]);
 
 	EXPECT (in+i, UTF8_BAD_LEADING_BYTE);
     }
@@ -164,8 +165,8 @@ utf_8_test_4_1 ()
 {
     /* We don't allow the leading byte 0xC0 anyway. */
     EXPECT (kuhn_4_1_1, UTF8_BAD_LEADING_BYTE);
-    EXPECT (kuhn_4_1_2, UTF8_NON_SHORTEST);
-    EXPECT (kuhn_4_1_3, UTF8_NON_SHORTEST);
+    EXPECT (kuhn_4_1_2, UTF8_BAD_CONTINUATION_BYTE);
+    EXPECT (kuhn_4_1_3, UTF8_BAD_CONTINUATION_BYTE);
     /* These are five and six bytes so they are rejected at the first
        byte. */
     EXPECT (kuhn_4_1_4, UTF8_BAD_LEADING_BYTE);
@@ -177,8 +178,8 @@ utf_8_test_4_2 ()
 {
     /* We don't allow the leading byte 0xC1 anyway. */
     EXPECT (kuhn_4_2_1, UTF8_BAD_LEADING_BYTE);
-    EXPECT (kuhn_4_2_2, UTF8_NON_SHORTEST);
-    EXPECT (kuhn_4_2_3, UTF8_NON_SHORTEST);
+    EXPECT (kuhn_4_2_2, UTF8_BAD_CONTINUATION_BYTE);
+    EXPECT (kuhn_4_2_3, UTF8_BAD_CONTINUATION_BYTE);
     /* These are five and six bytes so they are rejected at the first
        byte. */
     EXPECT (kuhn_4_2_4, UTF8_BAD_LEADING_BYTE);
@@ -190,8 +191,8 @@ utf_8_test_4_3 ()
 {
     /* We don't allow the leading byte 0xC0 anyway. */
     EXPECT (kuhn_4_3_1, UTF8_BAD_LEADING_BYTE);
-    EXPECT (kuhn_4_3_2, UTF8_NON_SHORTEST);
-    EXPECT (kuhn_4_3_3, UTF8_NON_SHORTEST);
+    EXPECT (kuhn_4_3_2, UTF8_BAD_CONTINUATION_BYTE);
+    EXPECT (kuhn_4_3_3, UTF8_BAD_CONTINUATION_BYTE);
     /* These are five and six bytes so they are rejected at the first
        byte. */
     EXPECT (kuhn_4_3_4, UTF8_BAD_LEADING_BYTE);
@@ -244,6 +245,8 @@ utf_8_test_5_3 ()
     EXPECT (kuhn_5_3_2, UNICODE_NOT_CHARACTER);
     l = strlen (kuhn_5_3_3);
     for (i = 0; i < l; i += 3) {
+	printf ("# i = %d, %X %X %X\n", i, (uint8_t) kuhn_5_3_3[i],
+		(uint8_t) kuhn_5_3_3[i+1], (uint8_t) kuhn_5_3_3[i+2]);
 	EXPECT (kuhn_5_3_3 + i, UNICODE_NOT_CHARACTER);
     }
 }
@@ -253,9 +256,7 @@ utf_8_test_5 ()
 {
     utf_8_test_5_1 ();
     utf_8_test_5_2 ();
-    valid_todo = 1;
     utf_8_test_5_3 ();
-    valid_todo = 0;
 }
 
 int main ()
