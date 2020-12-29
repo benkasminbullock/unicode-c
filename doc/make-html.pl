@@ -11,6 +11,7 @@ use Table::Readable 'read_table';
 use Perl::Build qw!get_info get_commit!;
 use URI::Escape 'uri_escape_utf8';
 use Carp;
+use Template;
 
 my $infile = "$Bin/doc.json";
 my $docs = json_file_to_perl ($infile);
@@ -31,6 +32,7 @@ if (@data > 1) {
     die "Too many entries in table '$table'";
 }
 my $data = $data[0];
+
 my $author = $data->{author};
 info_line ($info, 'author', $author);
 my $commit = get_commit (%pbinputs);
@@ -41,6 +43,7 @@ info_line ($info, 'date', $docs->{date});
 my $email = $data->{email};
 $email = make_mailto ($email);
 info_line ($info, 'email', $email);
+info_line ($info, 'licence', 'BSD 3 Clause, GNU GPL, Perl Artistic');
 my $repolink = HTML::Make->new('a', attr => {href => $repo}, text => $repo);
 info_line ($info, 'repository', $repolink->text ());
 
@@ -74,8 +77,19 @@ for my $m (@macros) {
     $mdiv->push ('h3', text => "$name ($m->{value})", attr => {id => $name});
     $mdiv->push ('p', text => improve ($m->{meaning}));
 }
+my $see_also;
+my $tt = Template->new (
+    STRICT => 1,
+    ABSOLUTE => 1,
+    INCLUDE_PATH => [$Bin],
+    ENCODING => 'UTF-8',
+);
+my %vars;
+$vars{data} = $data;
+$tt->process ('see-also.html.tmpl', \%vars, \$see_also, encoding => 'utf8')
+    or die '' . $tt->error ();
+$page->add_text ($see_also);
 write_text ($outfile, $page->text ());
-system ("cp -f $outfile /usr/local/www/data/");
 exit;
 
 sub improve

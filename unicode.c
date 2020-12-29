@@ -1,5 +1,5 @@
-/* This file is a Unicode library in the programming language C which
-   deals with conversions to and from the UTF-8 format. */
+/* This is a Unicode library in the programming language C which deals
+   with conversions to and from the UTF-8 format. */
 
 /*
   Author: 
@@ -229,6 +229,8 @@ utf8_no_checks (const uint8_t * input, const uint8_t ** end_ptr)
 	return UTF8_BAD_LEADING_BYTE;
     }
 }
+
+/* Surrogate pair zone. */
 
 #define UNI_SUR_HIGH_START  0xD800
 #define UNI_SUR_HIGH_END    0xDBFF
