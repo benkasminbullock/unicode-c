@@ -21,6 +21,17 @@
 .Pp
 [% function.desc %]
 [%- END %]
+.Ss utf8_info_t
+.Pp
+The data structure is as follows.
+.Bd -literal
+typedef struct utf8_info 
+{
+    int32_t len_read;
+    int32_t runes_read;
+}
+utf8_info_t;
+.Ed
 .Sh RETURN VALUE MACROS
 [%- FOR macro IN return_macros %]
 .Ss [% macro.name %]

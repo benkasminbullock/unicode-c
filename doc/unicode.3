@@ -184,6 +184,17 @@ Given "input" and "len", validate "input" byte by byte up to "len". The return v
 utf8_info_t is defined in "unicode.h".
 .Pp
 The value of "info.len_read" is the number of bytes processed. the value of "info.runes_read" is the number of Unicode code points in the input.
+.Ss utf8_info_t
+.Pp
+The data structure is as follows.
+.Bd -literal
+typedef struct utf8_info 
+{
+    int32_t len_read;
+    int32_t runes_read;
+}
+utf8_info_t;
+.Ed
 .Sh RETURN VALUE MACROS
 .Ss UNICODE_EMPTY_INPUT
 UNICODE_EMPTY_INPUT (-5)
