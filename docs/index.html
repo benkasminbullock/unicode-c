@@ -1,6 +1,12 @@
-<html><head><title>A C Unicode and UTF-8 library</title>
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>A C Unicode and UTF-8 library</title>
 </head>
-<body><h1>
+<body>
+<h1>
 A C Unicode and UTF-8 library</h1>
 <p>
  This is a Unicode library in the programming language C which deals
@@ -12,8 +18,8 @@ A C Unicode and UTF-8 library</h1>
 </tr>
 <tr>
 <th>Commit:</th>
-<td><a href="https://github.com/benkasminbullock/unicode-c/commit/335684779e6cb8f0d11fccef393c9810f4855532">
-335684779e6cb8f0d11fccef393c9810f4855532</a>
+<td><a href="https://github.com/benkasminbullock/unicode-c/commit/a84c5f0dd0cf8855e56a0ee2d670a3748251160a">
+a84c5f0dd0cf8855e56a0ee2d670a3748251160a</a>
 </td>
 </tr>
 <tr>
@@ -41,7 +47,7 @@ Functions</h2>
 <h3 id="surrogate_to_utf8">
 surrogate_to_utf8</h3>
 <pre>
-int <b>surrogate_to_utf8</b> (int32_t hi, int32_t lo, uint8_t * utf8);
+int32_t <b>surrogate_to_utf8</b> (int32_t hi, int32_t lo, uint8_t * utf8);
 </pre>
 <p>
 Convert the surrogate pair in <code>hi</code> and <code>lo</code> to UTF-8 in <code>utf8</code>. This calls "<a href="#surrogates_to_unicode">surrogates_to_unicode</a>" and "<a href="#ucs2_to_utf8">ucs2_to_utf8</a>", thus it can return the same errors as them, and has the same restriction on <code>utf8</code> as "<a href="#ucs2_to_utf8">ucs2_to_utf8</a>".</p>
@@ -50,7 +56,7 @@ Convert the surrogate pair in <code>hi</code> and <code>lo</code> to UTF-8 in <c
 <h3 id="surrogates_to_unicode">
 surrogates_to_unicode</h3>
 <pre>
-int <b>surrogates_to_unicode</b> (int32_t hi, int32_t lo);
+int32_t <b>surrogates_to_unicode</b> (int32_t hi, int32_t lo);
 </pre>
 <p>
 Convert a surrogate pair in <code>hi</code> and <code>lo</code> to a single Unicode value. The return value is the Unicode value. If the return value is negative, an error has occurred. If <code>hi</code> and <code>lo</code> do not form a surrogate pair, the error value <a href="#UNICODE_NOT_SURROGATE_PAIR">UNICODE_NOT_SURROGATE_PAIR</a> (-3) is returned. 
@@ -61,7 +67,7 @@ Convert a surrogate pair in <code>hi</code> and <code>lo</code> to a single Unic
 <h3 id="trim_to_utf8_start">
 trim_to_utf8_start</h3>
 <pre>
-int <b>trim_to_utf8_start</b> (const uint8_t ** ptr);
+int32_t <b>trim_to_utf8_start</b> (const uint8_t ** ptr);
 </pre>
 <p>
 Make <code>*ptr</code> point to the start of the first UTF-8 character after its initial value. This assumes that there are at least four bytes which can be read, and that <code>*ptr</code> points to valid UTF-8. 
@@ -76,7 +82,7 @@ If any of the bytes read contains invalid UTF-8 bytes 0xFE and 0xFF, the error c
 <h3 id="ucs2_to_utf8">
 ucs2_to_utf8</h3>
 <pre>
-int <b>ucs2_to_utf8</b> (int32_t ucs2, uint8_t * utf8);
+int32_t <b>ucs2_to_utf8</b> (int32_t ucs2, uint8_t * utf8);
 </pre>
 <p>
 Input: a Unicode code point, <code>ucs2</code>. 
@@ -101,7 +107,7 @@ This adds a zero byte to the end of the string. It assumes that the buffer <code
 <h3 id="unicode_chars_to_bytes">
 unicode_chars_to_bytes</h3>
 <pre>
-int <b>unicode_chars_to_bytes</b> (const uint8_t * utf8, int32_t n_chars);
+int32_t <b>unicode_chars_to_bytes</b> (const uint8_t * utf8, int32_t n_chars);
 </pre>
 <p>
 Given a nul-terminated string <code>utf8</code> and a number of Unicode characters <code>n_chars</code>, return the number of bytes into <code>utf8</code> at which the end of the characters occurs. A negative value indicates some kind of error. If <code>utf8</code> contains a zero byte, the return value is <a href="#UNICODE_EMPTY_INPUT">UNICODE_EMPTY_INPUT</a> (-5). This may also return any of the error values of "<a href="#utf8_to_ucs2">utf8_to_ucs2</a>".</p>
@@ -110,7 +116,7 @@ Given a nul-terminated string <code>utf8</code> and a number of Unicode characte
 <h3 id="unicode_code_to_error">
 unicode_code_to_error</h3>
 <pre>
-int <b>unicode_code_to_error</b> (int32_t code);
+int32_t <b>unicode_code_to_error</b> (int32_t code);
 </pre>
 <p>
 Given a return value <code>code</code> which is negative or zero, return a string which describes what the return value means. Positive non-zero return values never indicate errors or statuses in this library.</p>
@@ -119,7 +125,7 @@ Given a return value <code>code</code> which is negative or zero, return a strin
 <h3 id="unicode_count_chars">
 unicode_count_chars</h3>
 <pre>
-int <b>unicode_count_chars</b> (const uint8_t * utf8);
+int32_t <b>unicode_count_chars</b> (const uint8_t * utf8);
 </pre>
 <p>
 Given a nul-terminated string <code>utf8</code>, return the total number of Unicode characters it contains.
@@ -132,7 +138,7 @@ If an error occurs, this may return <a href="#UTF8_BAD_LEADING_BYTE">UTF8_BAD_LE
 <h3 id="unicode_count_chars_fast">
 unicode_count_chars_fast</h3>
 <pre>
-int <b>unicode_count_chars_fast</b> (const uint8_t * utf8);
+int32_t <b>unicode_count_chars_fast</b> (const uint8_t * utf8);
 </pre>
 <p>
 Like <a href="#unicode_count_chars">unicode_count_chars</a>, but without error checks or validation of the input. This only checks the first byte of each UTF-8 sequence, then jumps over the succeeding bytes. It may return <a href="#UTF8_BAD_LEADING_BYTE">UTF8_BAD_LEADING_BYTE</a> (-1) if the first byte is invalid.</p>
@@ -141,7 +147,7 @@ Like <a href="#unicode_count_chars">unicode_count_chars</a>, but without error c
 <h3 id="unicode_to_surrogates">
 unicode_to_surrogates</h3>
 <pre>
-int <b>unicode_to_surrogates</b> (int32_t unicode, int32_t * hi_ptr, int32_t * lo_ptr);
+int32_t <b>unicode_to_surrogates</b> (int32_t unicode, int32_t * hi_ptr, int32_t * lo_ptr);
 </pre>
 <p>
 This converts the Unicode code point in <code>unicode</code> into a surrogate pair, and returns the two parts in <code>*hi_ptr</code> and <code>*lo_ptr</code>. 
@@ -154,7 +160,7 @@ If <code>unicode</code> does not need to be a surrogate pair, the error <a href=
 <h3 id="utf8_bytes">
 utf8_bytes</h3>
 <pre>
-int <b>utf8_bytes</b> (uint8_t c);
+int32_t <b>utf8_bytes</b> (uint8_t c);
 </pre>
 <p>
 This function returns the number of bytes of UTF-8 a sequence starting with byte <code>c</code> will become, either 1 (c = 0000xxxx), 2 (c = 110xxxxx), 3 (c = 1110xxxx), or 4 (c = 111100xx or c = 11110100). If <code>c</code> is not a valid UTF-8 first byte, the value <a href="#UTF8_BAD_LEADING_BYTE">UTF8_BAD_LEADING_BYTE</a> (-1) is returned.</p>
@@ -163,7 +169,7 @@ This function returns the number of bytes of UTF-8 a sequence starting with byte
 <h3 id="utf8_no_checks">
 utf8_no_checks</h3>
 <pre>
-int <b>utf8_no_checks</b> (const uint8_t * input, const uint8_t ** end_ptr);
+int32_t <b>utf8_no_checks</b> (const uint8_t * input, const uint8_t ** end_ptr);
 </pre>
 <p>
 Try to convert <code>input</code> from UTF-8 to UCS-2, and return a value even if the input is partly broken.  This checks the first byte of the input, but it doesn't check the subsequent bytes.</p>
@@ -172,7 +178,7 @@ Try to convert <code>input</code> from UTF-8 to UCS-2, and return a value even i
 <h3 id="utf8_to_ucs2">
 utf8_to_ucs2</h3>
 <pre>
-int <b>utf8_to_ucs2</b> (const uint8_t * input, const uint8_t ** end_ptr);
+int32_t <b>utf8_to_ucs2</b> (const uint8_t * input, const uint8_t ** end_ptr);
 </pre>
 <p>
 This function converts UTF-8 encoded bytes in <code>input</code> into the equivalent Unicode code point.  The return value is the Unicode code point corresponding to the UTF-8 character in <code>input</code> if successful, and a negative number if not successful.  Nul bytes are rejected.
@@ -197,7 +203,7 @@ If the value is within the range of surrogate pairs, the error <a href="#UNICODE
 <h3 id="valid_utf8">
 valid_utf8</h3>
 <pre>
-int <b>valid_utf8</b> (const uint8_t * input, int32_t input_length);
+int32_t <b>valid_utf8</b> (const uint8_t * input, int32_t input_length);
 </pre>
 <p>
 Given <code>input</code> and <code>input_length</code>, validate <code>input</code> byte by byte up to <code>input_length</code>. The return value may be <a href="#UTF8_VALID">UTF8_VALID</a> (1) or <a href="#UTF8_INVALID">UTF8_INVALID</a> (0).</p>
@@ -206,7 +212,7 @@ Given <code>input</code> and <code>input_length</code>, validate <code>input</co
 <h3 id="validate_utf8">
 validate_utf8</h3>
 <pre>
-int <b>validate_utf8</b> (const uint8_t * input, int32_t len, utf8_info_t * info);
+int32_t <b>validate_utf8</b> (const uint8_t * input, int32_t len, utf8_info_t * info);
 </pre>
 <p>
 Given <code>input</code> and <code>len</code>, validate <code>input</code> byte by byte up to <code>len</code>. The return value is "<a href="#UNICODE_OK">UNICODE_OK</a> (0)" (zero) on success or the error found (a negative number) on failure.
@@ -307,6 +313,6 @@ The maximum number of bytes we need to contain any Unicode code point as UTF-8 a
 <h2>See also</h2>
 
 <ul>
-<li><b>Online version</b> There is an online version at at <a href='https://www.lemoda.net/tools/uniconvert/index.html'>https://www.lemoda.net/tools/uniconvert/index.html</a>.
+<li><b>Online version</b> There is an online version at <a href='https://www.lemoda.net/tools/uniconvert/index.html'>https://www.lemoda.net/tools/uniconvert/index.html</a>.
 </ul>
 </html>
