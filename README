@@ -35,8 +35,9 @@ download and install all the necessary modules:
 
 * Conventions
 
-All the functions return values of type int32_t (32-bit signed
-integers). All of the UTF-8 inputs are of the type "unsigned char".
+All of the functions except "unicode_code_to_error" return values of
+type int32_t (32-bit signed integers). All of the UTF-8 inputs are of
+the type "unsigned char".
 
 * Testing:
 

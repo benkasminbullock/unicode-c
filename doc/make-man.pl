@@ -3,10 +3,10 @@ use warnings;
 use strict;
 use utf8;
 use FindBin '$Bin';
-use JSON::Parse 'json_file_to_perl';
+use JSON::Parse 'read_json';
 use Template;
 
-my $data = json_file_to_perl ("$Bin/doc.json");
+my $data = read_json ("$Bin/doc.json");
 my $tt = Template->new (
     STRICT => 1,
     ABSOLUTE => 1,

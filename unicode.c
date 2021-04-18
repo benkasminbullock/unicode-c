@@ -993,7 +993,8 @@ trim_to_utf8_start (const uint8_t ** ptr)
 /* Given a return value "code" which is negative or zero, return a
    string which describes what the return value means. Positive
    non-zero return values never indicate errors or statuses in this
-   library. */
+   library. Unknown error codes result in a default string being
+   returned. */
 
 const char *
 unicode_code_to_error (int32_t code)

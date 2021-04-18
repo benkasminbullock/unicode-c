@@ -1,14 +1,9 @@
-all: unicode.3 unicode.html ../docs/index.html
-
-../docs/index.html: unicode.html
-	if [ -f $@ ]; then chmod 0644 $@; fi
-	cp -f unicode.html $@
-	chmod 0444 $@
+all: unicode.3 unicode.html
 
 unicode.3: unicode.3.tmpl make-man.pl doc.json
 	./make-man.pl
 
-unicode.html: make-html.pl doc.json
+unicode.html: make-html.pl doc.json see-also.html.tmpl
 	./make-html.pl
 
 doc.json: ../unicode.c make-doc.pl
